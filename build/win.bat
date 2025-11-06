@@ -128,9 +128,7 @@ jpackage ^
     --java-options "-Xms256m" ^
     --java-options "-Xmx512m" ^
     --java-options "-Dfile.encoding=UTF-8" ^
-    --java-options "-Djavax.accessibility.assistive_technologies=" ^
-    --java-options "-Dawt.useSystemAAFontSettings=on" ^
-    --java-options "-Dswing.aatext=true"
+    --java-options "-Djavax.accessibility.assistive_technologies="
 
 if errorlevel 1 (
     echo ERROR: jpackage failed

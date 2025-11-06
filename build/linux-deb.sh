@@ -112,9 +112,7 @@ jpackage \
     --linux-app-category "Development" \
     --java-options "-Xms256m" \
     --java-options "-Xmx512m" \
-    --java-options "-Dfile.encoding=UTF-8" \
-    --java-options "-Dawt.useSystemAAFontSettings=on" \
-    --java-options "-Dswing.aatext=true"
+    --java-options "-Dfile.encoding=UTF-8"
 
 if [ $? -ne 0 ]; then
     echo "❌ jpackage 打包失败"

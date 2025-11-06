@@ -104,9 +104,7 @@ jpackage \
     --copyright "© 2025 Laker" \
     --java-options "-Xms256m" \
     --java-options "-Xmx512m" \
-    --java-options "-Dfile.encoding=UTF-8" \
-    --java-options "-Dawt.useSystemAAFontSettings=on" \
-    --java-options "-Dswing.aatext=true"
+    --java-options "-Dfile.encoding=UTF-8"
 
 # 显示文件大小统计
 JAR_SIZE=$(du -h "target/${JAR_NAME}" | awk '{print $1}')

@@ -163,9 +163,7 @@ jobs:
             --java-options $javaOpts[0] `
             --java-options $javaOpts[1] `
             --java-options $javaOpts[2] `
-            --java-options "-Djavax.accessibility.assistive_technologies=" `
-            --java-options "-Dawt.useSystemAAFontSettings=on" `
-            --java-options "-Dswing.aatext=true"
+            --java-options "-Djavax.accessibility.assistive_technologies="
           
           # 重命名添加平台和架构标识（符合命名规范）
           $oldMsiName = "EasyPostman-$version.msi"
@@ -276,9 +274,7 @@ jobs:
             --vendor "Laker" `
             --copyright "© 2025 Laker" `
             --java-options $javaOpts[0] `
-            --java-options "-Djavax.accessibility.assistive_technologies=" `
-            --java-options "-Dawt.useSystemAAFontSettings=on" `
-            --java-options "-Dswing.aatext=true"
+            --java-options $javaOpts[1] `
             --java-options $javaOpts[2] `
             --java-options "-Djavax.accessibility.assistive_technologies="
 
@@ -395,9 +391,7 @@ jobs:
             --copyright "© 2025 Laker" \
             --java-options "${JAVA_OPTS[0]}" \
             --java-options "${JAVA_OPTS[1]}" \
-            --java-options "${JAVA_OPTS[2]}" \
-            --java-options "-Dawt.useSystemAAFontSettings=on" \
-            --java-options "-Dswing.aatext=true"
+            --java-options "${JAVA_OPTS[2]}"
           
           # 重命名为 Intel 版本（使用标准架构标识）
           mv dist/EasyPostman-$VERSION.dmg dist/EasyPostman-$VERSION-macos-x86_64.dmg
@@ -497,9 +491,7 @@ jobs:
             --copyright "© 2025 Laker" \
             --java-options "${JAVA_OPTS[0]}" \
             --java-options "${JAVA_OPTS[1]}" \
-            --java-options "${JAVA_OPTS[2]}" \
-            --java-options "-Dawt.useSystemAAFontSettings=on" \
-            --java-options "-Dswing.aatext=true"
+            --java-options "${JAVA_OPTS[2]}"
           
           # 重命名为 ARM 版本（使用标准架构标识）
           mv dist/EasyPostman-$VERSION.dmg dist/EasyPostman-$VERSION-macos-arm64.dmg
@@ -642,9 +634,7 @@ jobs:
             --copyright "© 2025 Laker" \
             --description "A modern API testing tool similar to Postman" \
             --linux-shortcut \
-            --java-options "${JAVA_OPTS[2]}" \
-            --java-options "-Dawt.useSystemAAFontSettings=on" \
-            --java-options "-Dswing.aatext=true"
+            --linux-menu-group "Development" \
             --linux-app-category "Development" \
             --java-options "${JAVA_OPTS[0]}" \
             --java-options "${JAVA_OPTS[1]}" \

@@ -101,11 +101,11 @@ public class StyleUtils {
         // Table 选中效果：使用表格选中背景色，更加明显
         properties.put("Table.selectionBackground", ModernColors.TABLE_SELECTION_BACKGROUND);
 
-        // List 选中效果：使用表格选中背景色，更加明显
-        properties.put("List.selectionBackground", ModernColors.TABLE_SELECTION_BACKGROUND);
+        // List 选中效果：使用表格选中背景色，更加明显 这样加油bug啊
+//        properties.put("List.selectionBackground", ModernColors.TABLE_SELECTION_BACKGROUND);
 
         // Tree 选中效果：使用表格选中背景色，更加明显
-        properties.put("Tree.selectionBackground", ModernColors.TABLE_SELECTION_BACKGROUND);
+//        properties.put("Tree.selectionBackground", ModernColors.TABLE_SELECTION_BACKGROUND);
 
         // Dialog 样式增强
         properties.put("Dialog.background", panelBg);

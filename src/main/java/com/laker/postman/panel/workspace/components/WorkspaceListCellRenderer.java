@@ -1,6 +1,7 @@
 package com.laker.postman.panel.workspace.components;
 
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.model.Workspace;
 import com.laker.postman.model.WorkspaceType;
 import com.laker.postman.service.WorkspaceService;
@@ -29,6 +30,16 @@ public class WorkspaceListCellRenderer extends DefaultListCellRenderer {
             configureWorkspaceStyle();
             setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         }
+
+        // 优化选中效果：使用表格选中背景色，文字保持深色，无边框
+        if (isSelected) {
+            setBackground(ModernColors.TABLE_SELECTION_BACKGROUND);
+            setForeground(Color.WHITE);
+        } else {
+            setBackground(list.getBackground());
+            setForeground(ModernColors.TEXT_PRIMARY);
+        }
+
         return this;
     }
 

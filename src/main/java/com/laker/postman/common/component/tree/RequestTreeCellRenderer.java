@@ -43,7 +43,7 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         // 优化选中效果：使用表格选中背景色，更加明显
         if (sel) {
             setBackgroundSelectionColor(ModernColors.TABLE_SELECTION_BACKGROUND);
-            setTextSelectionColor(Color.WHITE);
+            setTextSelectionColor(ModernColors.TEXT_PRIMARY);
         } else {
             setBackgroundNonSelectionColor(getBackground());
             setTextNonSelectionColor(ModernColors.TEXT_PRIMARY);

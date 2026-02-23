@@ -20,6 +20,7 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
@@ -490,34 +491,71 @@ public class ResponseBodyPanel extends JPanel {
 
     /**
      * 加载图片并切换到图片预览卡片
+     * <p>
+     * - GIF  → ImageIcon(URL)（Swing 内置动图支持，保留动画）
+     * - WebP → TwelveMonkeys ImageIO 自动注册后 ImageIO.read() 可解码
+     * - SVG  → 降级：直接用文本编辑器显示原始 XML 内容
+     * - 其他 → ImageIO.read() + ImageIcon
+     * </p>
      *
      * @param filePath 临时文件路径
      * @param bodySize 图片字节数
      */
     private void showImagePreview(String filePath, long bodySize) {
+        File file = new File(filePath);
+        String nameLower = file.getName().toLowerCase();
+
         try {
-            BufferedImage img = ImageIO.read(new File(filePath));
-            if (img == null) {
-                // 无法解码，回退到文本视图显示提示
-                responseBodyPane.setText("[Image cannot be decoded: " + filePath + "]");
-                responseBodyPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-                switchCard(CARD_TEXT);
-                sizeWarningLabel.setText(String.format("  [%.2f KB]", bodySize / 1024.0));
+            // ── GIF 动图：使用 ImageIcon(URL) 保留动画 ──────────────────────
+            if (nameLower.endsWith(".gif")) {
+                ImageIcon gifIcon = new ImageIcon(file.toURI().toURL());
+                sizeWarningLabel.setText(String.format("  %d×%d  [%.2f KB]",
+                        gifIcon.getIconWidth(), gifIcon.getIconHeight(), bodySize / 1024.0));
                 sizeWarningLabel.setVisible(true);
+                imagePreviewLabel.setIcon(gifIcon);
+                imagePreviewLabel.setText(null);
+                switchCard(CARD_IMAGE);
                 return;
             }
-            // 更新大小标签
-            sizeWarningLabel.setText(String.format("  %d×%d  [%.2f KB]", img.getWidth(), img.getHeight(), bodySize / 1024.0));
-            sizeWarningLabel.setVisible(true);
 
+            // ── WebP / PNG / JPG / BMP / 其他（含 SVG 降级）────────────────
+            // TwelveMonkeys 已通过 SPI 自动注册 WebP reader，ImageIO.read() 直接支持
+            // SVG 无法被 ImageIO 解码（返回 null），会进入 showImageError 降级处理
+            BufferedImage img = ImageIO.read(file);
+            if (img == null) {
+                // SVG 或其他无法解码的格式：读取文件文本内容显示在编辑器中
+                if (nameLower.endsWith(".svg")) {
+                    String svgText = Files.readString(file.toPath());
+                    responseBodyPane.setText(svgText);
+                    responseBodyPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
+                    responseBodyPane.setCaretPosition(0);
+                    sizeWarningLabel.setText(String.format("  SVG  [%.2f KB]", bodySize / 1024.0));
+                    sizeWarningLabel.setVisible(true);
+                    switchCard(CARD_TEXT);
+                } else {
+                    showImageError("[Image cannot be decoded: " + file.getName() + "]", bodySize);
+                }
+                return;
+            }
+            sizeWarningLabel.setText(String.format("  %d×%d  [%.2f KB]",
+                    img.getWidth(), img.getHeight(), bodySize / 1024.0));
+            sizeWarningLabel.setVisible(true);
             imagePreviewLabel.setIcon(new ImageIcon(img));
             imagePreviewLabel.setText(null);
             switchCard(CARD_IMAGE);
+
         } catch (Exception e) {
-            responseBodyPane.setText("[Failed to load image: " + e.getMessage() + "]");
-            responseBodyPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-            switchCard(CARD_TEXT);
+            showImageError("[Failed to load image: " + e.getMessage() + "]", bodySize);
         }
+    }
+
+    /** 图片加载失败时回退到文本卡片显示错误信息 */
+    private void showImageError(String message, long bodySize) {
+        responseBodyPane.setText(message);
+        responseBodyPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+        sizeWarningLabel.setText(String.format("  [%.2f KB]", bodySize / 1024.0));
+        sizeWarningLabel.setVisible(true);
+        switchCard(CARD_TEXT);
     }
 
     /**

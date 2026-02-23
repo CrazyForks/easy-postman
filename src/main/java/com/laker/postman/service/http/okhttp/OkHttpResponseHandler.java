@@ -3,6 +3,7 @@ package com.laker.postman.service.http.okhttp;
 import com.laker.postman.common.component.DownloadProgressDialog;
 import com.laker.postman.common.exception.DownloadCancelledException;
 import com.laker.postman.model.HttpResponse;
+import com.laker.postman.service.http.EasyHttpHeaders;
 import com.laker.postman.service.http.sse.SseResEventListener;
 import com.laker.postman.service.setting.SettingManager;
 import com.laker.postman.util.FileExtensionUtil;
@@ -84,7 +85,7 @@ public class OkHttpResponseHandler {
         response.threadName = Thread.currentThread().getName();
         response.protocol = okResponse.protocol().toString();
         String contentType = okResponse.header(CONTENT_TYPE_HEADER, "");
-        int contentLengthHeader = parseContentLength(okResponse.header(CONTENT_LENGTH_HEADER));
+        int contentLengthHeader = parseContentLength(okResponse);
 
         if (isSSEContent(contentType)) {
             handleSseResponse(response);
@@ -135,6 +136,19 @@ public class OkHttpResponseHandler {
             }
         }
         return -1;
+    }
+
+    /**
+     * 读取响应中的内容长度：
+     * 优先读 Content-Length，若被 CompressionDecompressNetworkInterceptor 移除则
+     * 回退到 Easy-Content-Length（存储的是压缩前的原始大小，可作为近似估算）
+     */
+    private static int parseContentLength(Response okResponse) {
+        String contentLength = okResponse.header(CONTENT_LENGTH_HEADER);
+        if (contentLength == null) {
+            contentLength = okResponse.header(EasyHttpHeaders.EASY_CONTENT_LENGTH);
+        }
+        return parseContentLength(contentLength);
     }
 
     /**
@@ -294,7 +308,7 @@ public class OkHttpResponseHandler {
 
         // 检查文件大小限制
         int maxDownloadSize = getMaxDownloadSize();
-        int contentLengthHeader = parseContentLength(okResponse.header(CONTENT_LENGTH_HEADER));
+        int contentLengthHeader = parseContentLength(okResponse);
         if (maxDownloadSize > 0 && contentLengthHeader > maxDownloadSize) {
             if (is != null) is.close();
             SwingUtilities.invokeLater(() -> {

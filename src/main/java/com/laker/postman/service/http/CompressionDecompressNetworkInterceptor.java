@@ -10,6 +10,8 @@ import org.brotli.dec.BrotliInputStream;
 import java.io.IOException;
 import java.util.zip.Inflater;
 
+import static com.laker.postman.service.http.EasyHttpHeaders.*;
+
 /**
  * 网络拦截器：自动解压 gzip、deflate、br 三种压缩格式，流式解压，兼容 SSE/chunked/普通响应
  * 严格参考 OkHttp BridgeInterceptor 的 promisesBody 逻辑，只有在响应确实有 body 时才解压
@@ -24,7 +26,7 @@ public class CompressionDecompressNetworkInterceptor implements Interceptor {
         if ((responseCode < 100 || responseCode >= 200) && responseCode != 204 && responseCode != 304) {
             return true;
         }
-        if (response.header("Content-Length") != null ||
+        if (response.header(CONTENT_LENGTH) != null ||
                 "chunked".equalsIgnoreCase(response.header("Transfer-Encoding"))) {
             return true;
         }
@@ -35,8 +37,8 @@ public class CompressionDecompressNetworkInterceptor implements Interceptor {
     public Response intercept(Chain chain) throws IOException {
         Request request = chain.request();
         Response response = chain.proceed(request);
-        String encoding = response.header("Content-Encoding");
-        String contentLength = response.header("Content-Length");
+        String encoding = response.header(CONTENT_ENCODING);
+        String contentLength = response.header(CONTENT_LENGTH);
         MediaType respContentType = response.body() != null ? response.body().contentType() : null;
         // 只在 Content-Encoding 存在且 promisesBody 时处理，避免重复解压和流式响应卡死
         if (encoding != null && response.body() != null && promisesBody(response)) {
@@ -54,14 +56,14 @@ public class CompressionDecompressNetworkInterceptor implements Interceptor {
             }
             // 头部处理参考 BridgeInterceptor，流式解压，长度未知
             Response.Builder builder = response.newBuilder()
-                    .removeHeader("Content-Encoding")
-                    .removeHeader("Content-Length")
-                    .header("Easy-Content-Encoding", encoding)
+                    .removeHeader(CONTENT_ENCODING)
+                    .removeHeader(CONTENT_LENGTH)
+                    .header(EASY_CONTENT_ENCODING, encoding)
                     .body(ResponseBody.create(respContentType, -1, decompressed));
 
             // 如果原来有Content-Length，保存到Easy-Content-Length
             if (contentLength != null) {
-                builder.header("Easy-Content-Length", contentLength);
+                builder.header(EASY_CONTENT_LENGTH, contentLength);
             }
 
             return builder.build();

@@ -35,6 +35,7 @@ public class ResponseHeadersPanel extends JPanel {
         };
         headersTable = new JTable(tableModel);
         headersTable.setFillsViewportHeight(true);
+        headersTable.setFocusable(false);
         headersTable.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
         headersTable.setRowSorter(new TableRowSorter<>(tableModel));
         JScrollPane scrollPane = new JScrollPane(headersTable);

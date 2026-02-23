@@ -313,6 +313,9 @@ public class OkHttpResponseHandler {
                 response.filePath = fs.file.getAbsolutePath();
                 response.body = I18nUtil.getMessage(MessageKeys.BINARY_SAVED_TEMP_FILE);
                 response.bodySize = fs.size;
+                // 标记是否为图片类型，供 UI 层预览使用
+                String ct = okResponse.header(CONTENT_TYPE_HEADER, "");
+                response.isImage = ct != null && ct.toLowerCase().startsWith("image/");
             } catch (EOFException e) {
                 // 处理下载过程中连接中断的情况
                 log.error("Failed to download complete binary response: {}", e.getMessage());

@@ -143,6 +143,7 @@ public class CookieTablePanel extends JPanel {
         EditButton btnEdit = new EditButton();
 
         CloseButton btnDelete = new CloseButton();
+        btnDelete.setToolTipText("Delete");
 
         ClearButton btnClear = new ClearButton();
 
@@ -173,6 +174,7 @@ public class CookieTablePanel extends JPanel {
         // 设置表格样式
         table.setRowHeight(28);
         table.setShowGrid(true);
+        table.setFocusable(false);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.getTableHeader().setReorderingAllowed(false);
         table.setFont(FontsUtil.getDefaultFont(Font.PLAIN));

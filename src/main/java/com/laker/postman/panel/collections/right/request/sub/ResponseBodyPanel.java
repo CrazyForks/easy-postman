@@ -13,9 +13,11 @@ import lombok.Getter;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -56,6 +58,11 @@ public class ResponseBodyPanel extends JPanel {
     private static final String DEFAULT_FILE_NAME = "downloaded_file";
     private static final String CONTENT_TYPE_HEADER = "Content-Type";
     private static final String SKIP_AUTO_FORMAT_MESSAGE = " Skip auto-format for large response.";
+    private static final String CARD_TEXT = "TEXT";
+    private static final String CARD_IMAGE = "IMAGE";
+
+    // 图片预览组件
+    private final JLabel imagePreviewLabel;
 
 
     private final JLabel sizeWarningLabel;
@@ -78,7 +85,19 @@ public class ResponseBodyPanel extends JPanel {
 
         // 使用 SearchableTextArea 包装，禁用替换功能（仅搜索）
         searchableTextArea = new SearchableTextArea(responseBodyPane, false);
-        add(searchableTextArea, BorderLayout.CENTER);
+
+        // 图片预览组件
+        imagePreviewLabel = new JLabel();
+        imagePreviewLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        imagePreviewLabel.setVerticalAlignment(SwingConstants.CENTER);
+        JScrollPane imageScrollPane = new JScrollPane(imagePreviewLabel);
+        imageScrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        // 使用 CardLayout 在文本视图和图片视图之间切换
+        JPanel centerPanel = new JPanel(new CardLayout());
+        centerPanel.add(searchableTextArea, CARD_TEXT);
+        centerPanel.add(imageScrollPane, CARD_IMAGE);
+        add(centerPanel, BorderLayout.CENTER);
 
         JPanel toolBarPanel = new JPanel();
         toolBarPanel.setLayout(new BoxLayout(toolBarPanel, BoxLayout.X_AXIS));
@@ -327,6 +346,15 @@ public class ResponseBodyPanel extends JPanel {
         this.currentFilePath = resp.filePath;
         this.fileName = resp.fileName;
         this.lastHeaders = resp.headers;
+
+        // 图片预览
+        if (resp.isImage && resp.filePath != null && !resp.filePath.isEmpty()) {
+            showImagePreview(resp.filePath, resp.bodySize);
+            return;
+        }
+
+        // 切换回文本视图
+        switchCard(CARD_TEXT);
         String text = resp.body;
         String contentType = extractContentType(resp.headers);
 
@@ -451,6 +479,48 @@ public class ResponseBodyPanel extends JPanel {
     // ========== 辅助方法 ==========
 
     /**
+     * 切换中心区域显示的卡片（文本编辑器 或 图片预览）
+     */
+    private void switchCard(String cardName) {
+        Container centerPanel = searchableTextArea.getParent();
+        if (centerPanel != null && centerPanel.getLayout() instanceof CardLayout cl) {
+            cl.show(centerPanel, cardName);
+        }
+    }
+
+    /**
+     * 加载图片并切换到图片预览卡片
+     *
+     * @param filePath 临时文件路径
+     * @param bodySize 图片字节数
+     */
+    private void showImagePreview(String filePath, long bodySize) {
+        try {
+            BufferedImage img = ImageIO.read(new File(filePath));
+            if (img == null) {
+                // 无法解码，回退到文本视图显示提示
+                responseBodyPane.setText("[Image cannot be decoded: " + filePath + "]");
+                responseBodyPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+                switchCard(CARD_TEXT);
+                sizeWarningLabel.setText(String.format("  [%.2f KB]", bodySize / 1024.0));
+                sizeWarningLabel.setVisible(true);
+                return;
+            }
+            // 更新大小标签
+            sizeWarningLabel.setText(String.format("  %d×%d  [%.2f KB]", img.getWidth(), img.getHeight(), bodySize / 1024.0));
+            sizeWarningLabel.setVisible(true);
+
+            imagePreviewLabel.setIcon(new ImageIcon(img));
+            imagePreviewLabel.setText(null);
+            switchCard(CARD_IMAGE);
+        } catch (Exception e) {
+            responseBodyPane.setText("[Failed to load image: " + e.getMessage() + "]");
+            responseBodyPane.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+            switchCard(CARD_TEXT);
+        }
+    }
+
+    /**
      * 清空响应体内容
      */
     private void clearResponseBody() {
@@ -462,6 +532,9 @@ public class ResponseBodyPanel extends JPanel {
         responseBodyPane.setCaretPosition(0);
         syntaxComboBox.setSelectedIndex(SyntaxType.AUTO_DETECT.getIndex());
         sizeWarningLabel.setVisible(false);
+        imagePreviewLabel.setIcon(null);
+        imagePreviewLabel.setText(null);
+        switchCard(CARD_TEXT);
     }
 
     /**

@@ -362,14 +362,11 @@ public class RequestEditPanel extends SingletonBasePanel {
     public boolean saveCurrentRequest() {
         // 检查当前 tab 是否是 saved-response 类型
         RequestEditSubPanel currentSubPanel = getCurrentSubPanel();
-        if (currentSubPanel != null) {
-            // 如果是 saved-response 类型，不保存
-            if (currentSubPanel.isSavedResponseTab()) {
-                log.info("当前是 saved-response tab，不执行保存");
-                NotificationUtil.showInfo(I18nUtil.getMessage(MessageKeys.SAVED_RESPONSE_READONLY));
-                return false;
-            }
+        if (currentSubPanel != null && currentSubPanel.isSavedResponseTab()) {
+            NotificationUtil.showInfo(I18nUtil.getMessage(MessageKeys.SAVED_RESPONSE_READONLY));
+            return false;
         }
+
 
         // 保存请求时，如果当前是预览 tab，则转为固定 tab（模仿 Postman 行为）
         promotePreviewTabToPermanent();

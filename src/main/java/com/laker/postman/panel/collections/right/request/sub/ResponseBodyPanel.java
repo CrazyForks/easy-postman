@@ -78,11 +78,11 @@ public class ResponseBodyPanel extends JPanel {
         responseBodyPane.setLineWrap(false); // 禁用自动换行以提升大文本性能
         responseBodyPane.setHighlightCurrentLine(false); // 关闭选中行高亮
 
-        // 设置字体 - 使用用户设置的字体大小
-        updateEditorFont();
-
-        // 加载编辑器主题 - 支持亮色和暗色主题自适应
+        // 加载编辑器主题 - 支持亮色和暗色主题自适应（必须在 setFont 之前，否则主题会覆盖字体）
         EditorThemeUtil.loadTheme(responseBodyPane);
+
+        // 设置字体 - 使用用户设置的字体大小（必须在主题应用之后，避免被主题覆盖）
+        updateEditorFont();
 
         // 使用 SearchableTextArea 包装，禁用替换功能（仅搜索）
         searchableTextArea = new SearchableTextArea(responseBodyPane, false);

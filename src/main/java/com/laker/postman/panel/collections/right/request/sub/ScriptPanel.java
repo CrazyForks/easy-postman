@@ -37,6 +37,8 @@ public class ScriptPanel extends JPanel {
     private final SnippetButton snippetBtn;
     private final IndicatorTabComponent preScriptTab;
     private final IndicatorTabComponent postScriptTab;
+    private final transient AutoCompletion prescriptAc;
+    private final transient AutoCompletion postscriptAc;
 
     static {
         AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
@@ -52,12 +54,12 @@ public class ScriptPanel extends JPanel {
 
         // 初始化并配置 PreScript 编辑器
         prescriptArea = new RSyntaxTextArea(6, 40);
-        configureEditor(prescriptArea);
+        prescriptAc = configureEditor(prescriptArea);
         SearchableTextArea prescriptSearchableArea = new SearchableTextArea(prescriptArea);
 
         // 初始化并配置 PostScript 编辑器
         postscriptArea = new RSyntaxTextArea(6, 40);
-        configureEditor(postscriptArea);
+        postscriptAc = configureEditor(postscriptArea);
         SearchableTextArea postscriptSearchableArea = new SearchableTextArea(postscriptArea);
 
         // 创建选项卡面板 垂直方向
@@ -185,9 +187,9 @@ public class ScriptPanel extends JPanel {
 
 
     /**
-     * 配置编辑器的通用设置
+     * 配置编辑器的通用设置，返回安装好的 AutoCompletion 实例
      */
-    private void configureEditor(RSyntaxTextArea area) {
+    private AutoCompletion configureEditor(RSyntaxTextArea area) {
         // 设置语法高亮
         area.setSyntaxEditingStyle(POSTMAN_JS_SYNTAX);
 
@@ -204,7 +206,7 @@ public class ScriptPanel extends JPanel {
 
         // 加载主题和自动补全
         EditorThemeUtil.loadTheme(area);
-        addAutoCompletion(area);
+        return addAutoCompletion(area);
     }
 
     /**
@@ -246,19 +248,27 @@ public class ScriptPanel extends JPanel {
         }
     }
 
+    /**
+     * 程序性地设置编辑器内容，临时禁用 AutoCompletion 自动激活，
+     * 避免 setText() 触发补全弹窗（AutoCompletion 无法区分用户输入与程序赋值）。
+     */
+    private void setEditorText(RSyntaxTextArea area, AutoCompletion ac, String text) {
+        if (ac != null) ac.setAutoActivationEnabled(false);
+        area.setText(text);
+        if (ac != null) ac.setAutoActivationEnabled(true);
+    }
+
     public void setPrescript(String text) {
-        prescriptArea.setText(text);
+        setEditorText(prescriptArea, prescriptAc, text);
         updateIndicator(preScriptTab, text);
-        // 如果设置的内容不为空，自动切换到Pre-script标签页
         if (text != null && !text.trim().isEmpty()) {
             tabbedPane.setSelectedIndex(0);
         }
     }
 
     public void setPostscript(String text) {
-        postscriptArea.setText(text);
+        setEditorText(postscriptArea, postscriptAc, text);
         updateIndicator(postScriptTab, text);
-        // 如果Pre-script为空且Post-script有内容，自动切换到Post-script标签页
         if (text != null && !text.trim().isEmpty() &&
                 (prescriptArea.getText() == null || prescriptArea.getText().trim().isEmpty())) {
             tabbedPane.setSelectedIndex(1);
@@ -348,20 +358,19 @@ public class ScriptPanel extends JPanel {
     }
 
     /**
-     * 为 RSyntaxTextArea 添加自动补全、悬浮提示和代码片段
+     * 为 RSyntaxTextArea 安装自动补全并返回 AutoCompletion 实例
      */
-    private void addAutoCompletion(RSyntaxTextArea area) {
+    private AutoCompletion addAutoCompletion(RSyntaxTextArea area) {
         var provider = ScriptSnippetManager.createCompletionProvider();
 
-        // 配置自动补全
         AutoCompletion ac = new AutoCompletion(provider);
-        ac.setAutoCompleteEnabled(true);      // 启用自动补全
-        ac.setAutoActivationEnabled(true);    // 启用自动激活
-        ac.setAutoActivationDelay(200);       // 200ms 延迟，快速响应
-        ac.setAutoCompleteSingleChoices(false); // 只有多个选项时才显示弹窗
-        ac.setShowDescWindow(true);           // 显示说明窗口
-        ac.setParameterAssistanceEnabled(false); // 禁用参数辅助（JavaScript 不需要）
-        // 安装到编辑器
+        ac.setAutoCompleteEnabled(true);
+        ac.setAutoActivationEnabled(true);
+        ac.setAutoActivationDelay(200);
+        ac.setAutoCompleteSingleChoices(false);
+        ac.setShowDescWindow(true);
+        ac.setParameterAssistanceEnabled(false);
         ac.install(area);
+        return ac;
     }
 }

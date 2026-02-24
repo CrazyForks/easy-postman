@@ -107,7 +107,6 @@ public class RequestTreeMouseHandler extends MouseAdapter {
      * 处理分组点击事件
      */
     private void handleGroupClick(MouseEvent e, DefaultMutableTreeNode node, Object[] obj, TreePath selPath) {
-        if (node.getChildCount() == 0) return;
 
         Rectangle rowBounds = requestTree.getRowBounds(requestTree.getRowForPath(selPath));
         if (rowBounds == null) return;

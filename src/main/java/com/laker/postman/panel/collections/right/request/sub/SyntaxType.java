@@ -1,11 +1,13 @@
 package com.laker.postman.panel.collections.right.request.sub;
 
+import lombok.Getter;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 
 /**
  * 语法类型枚举，统一管理语法高亮类型
  * 添加新的语法类型只需在此枚举中添加一项即可
  */
+@Getter
 public enum SyntaxType {
     AUTO_DETECT("Auto", null),
     JSON("JSON", SyntaxConstants.SYNTAX_STYLE_JSON),
@@ -21,14 +23,6 @@ public enum SyntaxType {
     SyntaxType(String displayName, String syntaxStyle) {
         this.displayName = displayName;
         this.syntaxStyle = syntaxStyle;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public String getSyntaxStyle() {
-        return syntaxStyle;
     }
 
     /**

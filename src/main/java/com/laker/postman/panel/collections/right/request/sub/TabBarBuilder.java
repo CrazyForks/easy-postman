@@ -2,23 +2,21 @@ package com.laker.postman.panel.collections.right.request.sub;
 
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
+import lombok.experimental.UtilityClass;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 /**
  * Tab栏构建器
  * 负责根据协议类型创建Tab按钮和面板
  */
+@UtilityClass
 public class TabBarBuilder {
 
     // Tab索引常量（与ResponsePanel保持一致）
     private static final int TAB_INDEX_LOG = 5;
-
-    private TabBarBuilder() {
-        // 工具类，禁止实例化
-    }
 
     /**
      * Tab配置信息
@@ -120,7 +118,7 @@ public class TabBarBuilder {
      * @param onTabSelected tab选中时的回调
      */
     public static void bindTabActions(JButton[] buttons, String[] tabNames,
-                                      JPanel cardPanel, Consumer<Integer> onTabSelected) {
+                                      JPanel cardPanel, IntConsumer onTabSelected) {
         for (int i = 0; i < buttons.length; i++) {
             final int tabIndex = i;
             buttons[i].addActionListener(e -> {

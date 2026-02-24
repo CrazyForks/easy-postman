@@ -40,6 +40,7 @@ public class NetworkLogPanel extends JPanel {
         // 1. Network Log Tab
         logArea = new JTextPane();
         logArea.setEditable(false);
+        logArea.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
         doc = logArea.getStyledDocument();
         JScrollPane logScroll = new JScrollPane(logArea);
         tabbedPane.addTab("Log", logScroll);
@@ -115,13 +116,13 @@ public class NetworkLogPanel extends JPanel {
                 Style stageStyle = logArea.addStyle("stageStyle_" + System.nanoTime(), null);
                 StyleConstants.setForeground(stageStyle, stageColor);
                 StyleConstants.setBold(stageStyle, true);
-                StyleConstants.setFontSize(stageStyle, 13);
+                StyleConstants.setFontSize(stageStyle, FontsUtil.getDefaultFont(Font.PLAIN).getSize());
 
                 // 正文样式
                 Style contentStyle = logArea.addStyle("contentStyle_" + System.nanoTime(), null);
                 StyleConstants.setForeground(contentStyle, getDefaultTextColor());
                 StyleConstants.setBold(contentStyle, bold);
-                StyleConstants.setFontSize(contentStyle, 13);
+                StyleConstants.setFontSize(contentStyle, FontsUtil.getDefaultFont(Font.PLAIN).getSize());
 
                 // 插入 emoji + 阶段名 + 时间（如果有）
                 StringBuilder stageText = new StringBuilder();

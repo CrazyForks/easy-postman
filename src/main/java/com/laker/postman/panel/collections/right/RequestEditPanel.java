@@ -39,8 +39,7 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.formdev.flatlaf.FlatClientProperties.TABBED_PANE_TAB_AREA_INSETS;
-import static com.formdev.flatlaf.FlatClientProperties.TABBED_PANE_TAB_INSETS;
+import static com.formdev.flatlaf.FlatClientProperties.*;
 import static com.laker.postman.util.SystemUtil.getClipboardCurlText;
 
 /**
@@ -708,6 +707,7 @@ public class RequestEditPanel extends SingletonBasePanel {
         tabbedPane.putClientProperty(TABBED_PANE_TAB_AREA_INSETS, new Insets(0, 0, 0, 5));
         // 设置tabbedPane中一个个头部标签的的内边距（上、左、下、右）
         tabbedPane.putClientProperty(TABBED_PANE_TAB_INSETS, new Insets(3, 5, 3, 5));
+        tabbedPane.putClientProperty(TABBED_PANE_TAB_HEIGHT, 40); // 设置tab高度，配合内边距让tab更美观
         add(tabbedPane, BorderLayout.CENTER);
     }
 

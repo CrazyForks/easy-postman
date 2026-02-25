@@ -20,9 +20,9 @@ import java.awt.geom.RoundRectangle2D;
 @Slf4j
 public class SearchReplacePanel extends JPanel {
 
-    // 图标路径常量
-    private static final String ICON_EXPAND = "icons/expand.svg";
-    private static final String ICON_COLLAPSE = "icons/collapse.svg";
+    // 图标路径常量 - chevron-right 表示替换面板已收起，chevron-down 表示替换面板已展开
+    private static final String ICON_EXPAND = "icons/chevron-right.svg";
+    private static final String ICON_COLLAPSE = "icons/chevron-down.svg";
 
     // 状态消息常量
     private static final String MSG_NO_RESULTS = "No results";

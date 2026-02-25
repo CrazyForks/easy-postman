@@ -1,5 +1,6 @@
 package com.laker.postman.common.component.tree;
 
+import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.laker.postman.model.HttpRequestItem;
 import com.laker.postman.model.RequestGroup;
@@ -32,10 +33,23 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         Object userObject = node.getUserObject();
         if (userObject instanceof Object[] obj) {
             if (RequestCollectionsLeftPanel.GROUP.equals(obj[0])) {
-                setIcon(new FlatSVGIcon("icons/group.svg", ICON_SIZE, ICON_SIZE));
                 Object groupData = obj[1];
                 String groupName = groupData instanceof RequestGroup requestGroup ? requestGroup.getName() : String.valueOf(groupData);
-                setText(groupName);
+                // 判断是否为第一层 Collection（父节点是 root）
+                boolean isRootLevel = node.getParent() instanceof DefaultMutableTreeNode parentNode &&
+                        RequestCollectionsLeftPanel.ROOT.equals(String.valueOf(parentNode.getUserObject()));
+                if (isRootLevel) {
+                    // 第一层：Collection 样式，参考 Postman - 使用专属图标 + 加粗字体
+                    setIcon(new FlatSVGIcon("icons/root_group.svg", ICON_SIZE, ICON_SIZE));
+                    int baseFontSize = SettingManager.getUiFontSize();
+                    String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
+                    setText("<html><span style='font-weight:bold;font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
+                            + escapeHtml(groupName) + "</span></html>");
+                } else {
+                    // 子层：Folder 样式（普通文件夹图标）
+                    setIcon(new FlatSVGIcon("icons/group.svg", ICON_SIZE, ICON_SIZE));
+                    setText(groupName);
+                }
             } else if (RequestCollectionsLeftPanel.REQUEST.equals(obj[0])) {
                 HttpRequestItem item = (HttpRequestItem) obj[1];
                 applyRequestRendering(item);

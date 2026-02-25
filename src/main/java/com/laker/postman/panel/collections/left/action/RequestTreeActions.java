@@ -69,6 +69,13 @@ public class RequestTreeActions {
     private void addGroupToNode(DefaultMutableTreeNode parentNode, String groupName) {
         if (parentNode == null) return;
         RequestGroup group = new RequestGroup(groupName);
+        // 参考 Postman：第一层 Collection 默认 No Auth，子层 Folder 默认 Inherit auth from parent
+        boolean isRootLevel = ROOT.equals(String.valueOf(parentNode.getUserObject()));
+        if (isRootLevel) {
+            group.setAuthType(AuthType.NONE.getConstant());
+        } else {
+            group.setAuthType(AuthType.INHERIT.getConstant());
+        }
         DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new Object[]{GROUP, group});
 
         int insertIdx = getGroupInsertIndex(parentNode);

@@ -536,9 +536,13 @@ public class WorkspaceService {
 
         // 如果删除的是当前工作区，切换到默认工作区
         if (currentWorkspace != null && currentWorkspace.getId().equals(workspaceId)) {
-            // 优先切换到默认工作区
+            // 优先切换到默认工作区，找不到则取列表第一个，确保 currentWorkspace 不为 null
             currentWorkspace = getDefaultWorkspace();
-            WorkspaceStorageUtil.saveCurrentWorkspace(currentWorkspace != null ? currentWorkspace.getId() : null);
+            if (currentWorkspace != null) {
+                WorkspaceStorageUtil.saveCurrentWorkspace(currentWorkspace.getId());
+            } else {
+                log.warn("No workspace available after deletion, currentWorkspace is null");
+            }
         }
 
         saveWorkspaces();
@@ -1184,7 +1188,7 @@ public class WorkspaceService {
             result.success = true;
             result.message = "Force pull successful, local changes have been discarded";
 
-            if (!commitIdBefore.equals(commitIdAfter)) {
+            if (!java.util.Objects.equals(commitIdBefore, commitIdAfter)) {
                 result.details += "Pulled new commits\n";
             } else {
                 result.details += "Already up to date\n";
@@ -1350,6 +1354,10 @@ public class WorkspaceService {
         } catch (Exception e) {
             log.error("Failed to load workspaces", e);
             workspaces = new ArrayList<>();
+            // 加载失败时也要保证内存中有默认工作区，避免后续逻辑空指针
+            Workspace defaultWs = WorkspaceStorageUtil.getDefaultWorkspace();
+            workspaces.add(defaultWs);
+            currentWorkspace = defaultWs;
         }
     }
 

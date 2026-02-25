@@ -385,6 +385,9 @@ public final class MessageKeys {
     public static final String WORKSPACE_TYPE_LOCAL = "workspace.type.local";
     public static final String WORKSPACE_TYPE_GIT = "workspace.type.git";
     public static final String WORKSPACE_PATH = "workspace.path";
+    public static final String WORKSPACE_PATH_COPY_TOOLTIP = "workspace.path.copy.tooltip";
+    public static final String WORKSPACE_PATH_OPEN_TOOLTIP = "workspace.path.open.tooltip";
+    public static final String WORKSPACE_PATH_NOT_EXIST = "workspace.path.not.exist";
     public static final String WORKSPACE_SELECT_PATH = "workspace.select.path";
     public static final String WORKSPACE_GIT_URL = "workspace.git.url";
     public static final String WORKSPACE_GIT_USERNAME = "workspace.git.username";

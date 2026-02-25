@@ -30,9 +30,14 @@ public class ConfigPathConstants {
     public static final String CLIENT_CERTIFICATES = getDataRootPath() + "client_certificates.json";
 
     /**
+     * 默认工作区目录（与其他工作区平级，根目录不参与 git）
+     */
+    public static final String DEFAULT_WORKSPACE_DIR = getDataRootPath() + "workspaces" + File.separator + "default" + File.separator;
+
+    /**
      * 集合配置文件（默认工作区）
      */
-    public static final String COLLECTIONS = getDataRootPath() + "collections.json";
+    public static final String COLLECTIONS = DEFAULT_WORKSPACE_DIR + "collections.json";
 
     /**
      * 应用设置文件
@@ -42,7 +47,7 @@ public class ConfigPathConstants {
     /**
      * 环境变量配置文件（默认工作区）
      */
-    public static final String ENVIRONMENTS = getDataRootPath() + "environments.json";
+    public static final String ENVIRONMENTS = DEFAULT_WORKSPACE_DIR + "environments.json";
 
     /**
      * 功能测试配置文件
@@ -99,22 +104,26 @@ public class ConfigPathConstants {
     // ==================== 工作区相关路径方法 ====================
 
     /**
-     * 获取指定工作区的集合文件路径
+     * 获取指定工作区的集合文件路径。
+     * {@link com.laker.postman.model.Workspace#getPath()} 保证末尾始终带 {@link java.io.File#separator}，
+     * 直接拼接文件名即可。
      */
     public static String getCollectionsPath(Workspace workspace) {
         if (workspace == null) {
             return COLLECTIONS;
         }
-        return workspace.getPath() + File.separator + "collections.json";
+        return workspace.getPath() + "collections.json";
     }
 
     /**
-     * 获取指定工作区的环境变量文件路径
+     * 获取指定工作区的环境变量文件路径。
+     * {@link com.laker.postman.model.Workspace#getPath()} 保证末尾始终带 {@link java.io.File#separator}，
+     * 直接拼接文件名即可。
      */
     public static String getEnvironmentsPath(Workspace workspace) {
         if (workspace == null) {
             return ENVIRONMENTS;
         }
-        return workspace.getPath() + File.separator + "environments.json";
+        return workspace.getPath() + "environments.json";
     }
 }

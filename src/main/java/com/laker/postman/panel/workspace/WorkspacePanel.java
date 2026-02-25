@@ -314,7 +314,7 @@ public class WorkspacePanel extends SingletonBasePanel {
     private void addGitMenuItems(JPopupMenu menu, Workspace workspace) {
         if (workspace.getType() != WorkspaceType.GIT) {
             // 所有本地工作区都可以转换为Git工作区（包括默认工作区）
-            // 默认工作区会通过 .gitignore 自动隔离全局配置文件
+            // 默认工作区位于 workspaces/default/ 子目录，与其他工作区平级，根目录不参与 git
             JMenuItem convertToGitItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.WORKSPACE_CONVERT_TO_GIT));
             convertToGitItem.setIcon(IconUtil.create("icons/git.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
             convertToGitItem.addActionListener(e -> convertToGitWorkspace(workspace));

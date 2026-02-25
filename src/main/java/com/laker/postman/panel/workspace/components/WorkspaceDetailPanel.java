@@ -5,33 +5,40 @@ import com.laker.postman.model.Workspace;
 import com.laker.postman.model.WorkspaceType;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.I18nUtil;
+import com.laker.postman.util.IconUtil;
 import com.laker.postman.util.MessageKeys;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+@Slf4j
 public class WorkspaceDetailPanel extends JPanel {
+
     public WorkspaceDetailPanel(Workspace workspace) {
-        this.setLayout(new BorderLayout());
-        // 去除外边框，只保留内边距
+        setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // 基本信息
         JPanel infoSection = new JPanel(new GridBagLayout());
         infoSection.setBorder(BorderFactory.createTitledBorder(I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_BASIC_INFO)));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST; // 确保左对齐
+        gbc.anchor = GridBagConstraints.WEST;
 
         // 名称
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.weightx = 0; // 标签不扩展
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
         infoSection.add(new JLabel(I18nUtil.getMessage(MessageKeys.WORKSPACE_NAME) + ":"), gbc);
         gbc.gridx = 1;
-        gbc.weightx = 1.0; // 值扩展填充剩余空间
+        gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         JLabel nameLabel = new JLabel(workspace.getName());
         nameLabel.setFont(FontsUtil.getDefaultFont(Font.BOLD));
@@ -50,7 +57,7 @@ public class WorkspaceDetailPanel extends JPanel {
                 I18nUtil.getMessage(MessageKeys.WORKSPACE_TYPE_LOCAL) :
                 I18nUtil.getMessage(MessageKeys.WORKSPACE_TYPE_GIT)), gbc);
 
-        // 路径
+        // 路径 —— 交互式路径组件
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.weightx = 0;
@@ -58,9 +65,9 @@ public class WorkspaceDetailPanel extends JPanel {
         infoSection.add(new JLabel(I18nUtil.getMessage(MessageKeys.WORKSPACE_PATH) + ":"), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        JLabel pathLabel = new JLabel(workspace.getPath());
-        infoSection.add(pathLabel, gbc);
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.WEST;
+        infoSection.add(new PathFieldPanel(workspace.getPath()), gbc);
 
         // 描述
         gbc.gridx = 0;
@@ -82,102 +89,178 @@ public class WorkspaceDetailPanel extends JPanel {
         gbc.gridx = 1;
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        infoSection.add(new JLabel(sdf.format(new Date(workspace.getCreatedAt()))), gbc);
+        infoSection.add(new JLabel(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(workspace.getCreatedAt()))), gbc);
 
         add(infoSection, BorderLayout.NORTH);
 
-        // Git 信息（如果是 Git 工作区）
         if (workspace.getType() == WorkspaceType.GIT) {
             add(createGitInfoPanel(workspace), BorderLayout.CENTER);
         }
-
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // 交互式路径组件：路径文本 + 复制按钮 + 在文件管理器中打开按钮
+    // ──────────────────────────────────────────────────────────────────────────
+
     /**
-     * 创建 Git 信息面板
+     * 路径交互组件：路径文本 + 复制按钮 + 在文件管理器中打开按钮，从左向右紧密排列。
      */
+    private static class PathFieldPanel extends JPanel {
+
+        PathFieldPanel(String path) {
+            setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+            setOpaque(false);
+
+            JLabel pathLabel = new JLabel(path);
+            pathLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+            pathLabel.setToolTipText(path);
+            pathLabel.setPreferredSize(new Dimension(
+                    Math.min(pathLabel.getPreferredSize().width, 400),
+                    pathLabel.getPreferredSize().height));
+            pathLabel.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
+            add(pathLabel);
+
+            add(Box.createHorizontalStrut(8));
+            add(makeCopyBtn(path));
+            add(makeOpenBtn(path));
+        }
+
+        private JButton makeCopyBtn(String path) {
+            JButton btn = makeIconBtn(
+                    IconUtil.createThemed("icons/copy.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL),
+                    I18nUtil.getMessage(MessageKeys.WORKSPACE_PATH_COPY_TOOLTIP));
+            btn.addActionListener(e -> {
+                Toolkit.getDefaultToolkit()
+                        .getSystemClipboard()
+                        .setContents(new StringSelection(path), null);
+                // 临时换绿色 check 图标作为成功反馈
+                btn.setIcon(IconUtil.createColored("icons/check.svg",
+                        IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL, new Color(40, 167, 69)));
+                Timer t = new Timer(1500, ev ->
+                        btn.setIcon(IconUtil.createThemed("icons/copy.svg",
+                                IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL)));
+                t.setRepeats(false);
+                t.start();
+            });
+            return btn;
+        }
+
+        private JButton makeOpenBtn(String path) {
+            JButton btn = makeIconBtn(
+                    IconUtil.createThemed("icons/file.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL),
+                    I18nUtil.getMessage(MessageKeys.WORKSPACE_PATH_OPEN_TOOLTIP));
+            btn.addActionListener(e -> {
+                try {
+                    File dir = new File(path);
+                    if (!dir.exists()) {
+                        JOptionPane.showMessageDialog(btn, path,
+                                I18nUtil.getMessage(MessageKeys.WORKSPACE_PATH_NOT_EXIST),
+                                JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    Desktop.getDesktop().open(dir);
+                } catch (Exception ex) {
+                    log.warn("Failed to open directory: {}", path, ex);
+                    JOptionPane.showMessageDialog(btn, ex.getMessage(),
+                            I18nUtil.getMessage(MessageKeys.ERROR),
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            });
+            return btn;
+        }
+
+        /**
+         * 无边框图标按钮，hover/press 跟随 FlatLaf 主题背景色
+         */
+        private static JButton makeIconBtn(Icon icon, String tooltip) {
+            JButton btn = new JButton(icon);
+            btn.setToolTipText(tooltip);
+            btn.setBorderPainted(false);
+            btn.setContentAreaFilled(false);
+            btn.setFocusPainted(false);
+            btn.setOpaque(false);
+            btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            btn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    btn.setContentAreaFilled(true);
+                    btn.setOpaque(true);
+                    Color hoverBg = UIManager.getColor("Button.hoverBackground");
+                    btn.setBackground(hoverBg != null ? hoverBg : new Color(0, 0, 0, 20));
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    btn.setContentAreaFilled(false);
+                    btn.setOpaque(false);
+                }
+
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    Color pressedBg = UIManager.getColor("Button.pressedBackground");
+                    btn.setBackground(pressedBg != null ? pressedBg : new Color(0, 0, 0, 40));
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    if (btn.contains(e.getPoint())) mouseEntered(e);
+                    else mouseExited(e);
+                }
+            });
+            return btn;
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Git 信息面板
+    // ──────────────────────────────────────────────────────────────────────────
+
     private JPanel createGitInfoPanel(Workspace workspace) {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createTitledBorder(I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_GIT_INFO)));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.WEST; // 确保左对齐
-
+        gbc.anchor = GridBagConstraints.WEST;
         int row = 0;
 
-        // 仓库来源
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0; // 标签不扩展
-        gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel(I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_REPO_SOURCE) + ":"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0; // 值扩展填充剩余空间
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(new JLabel(workspace.getGitRepoSource() == GitRepoSource.CLONED ?
-                I18nUtil.getMessage(MessageKeys.WORKSPACE_CLONE_FROM_REMOTE) :
-                I18nUtil.getMessage(MessageKeys.WORKSPACE_INIT_LOCAL)), gbc);
-        row++;
+        addRow(panel, gbc, row++, I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_REPO_SOURCE) + ":",
+                workspace.getGitRepoSource() == GitRepoSource.CLONED
+                        ? I18nUtil.getMessage(MessageKeys.WORKSPACE_CLONE_FROM_REMOTE)
+                        : I18nUtil.getMessage(MessageKeys.WORKSPACE_INIT_LOCAL));
 
-        // 远程仓库 URL
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0;
-        gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel(I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_REMOTE_REPO) + ":"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        JLabel urlLabel = new JLabel(workspace.getGitRemoteUrl());
-        urlLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
-        panel.add(urlLabel, gbc);
-        row++;
+        addRow(panel, gbc, row++, I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_REMOTE_REPO) + ":",
+                workspace.getGitRemoteUrl());
 
-        // 当前分支
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0;
-        gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel(I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_LOCAL_BRANCH) + ":"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(new JLabel(workspace.getCurrentBranch()), gbc);
-        row++;
+        addRow(panel, gbc, row++, I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_LOCAL_BRANCH) + ":",
+                workspace.getCurrentBranch());
 
-        // 远程分支
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0;
-        gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel(I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_REMOTE_BRANCH) + ":"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(new JLabel(workspace.getRemoteBranch()), gbc);
-        row++;
+        addRow(panel, gbc, row++, I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_REMOTE_BRANCH) + ":",
+                workspace.getRemoteBranch());
 
-        // 最后提交 ID
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0;
-        gbc.fill = GridBagConstraints.NONE;
-        panel.add(new JLabel(I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_LAST_COMMIT) + ":"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        String shortCommitId = "";
-        if (workspace.getLastCommitId() != null) {
-            shortCommitId = workspace.getLastCommitId().length() > 8
-                    ? workspace.getLastCommitId().substring(0, 8)
-                    : workspace.getLastCommitId();
-        }
-        JLabel commitLabel = new JLabel(shortCommitId);
-        commitLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
-        panel.add(commitLabel, gbc);
+        String shortCommitId = workspace.getLastCommitId() == null ? "" :
+                workspace.getLastCommitId().length() > 8
+                        ? workspace.getLastCommitId().substring(0, 8)
+                        : workspace.getLastCommitId();
+        addRow(panel, gbc, row, I18nUtil.getMessage(MessageKeys.WORKSPACE_DETAIL_LAST_COMMIT) + ":",
+                shortCommitId);
 
         return panel;
     }
 
+    /**
+     * 向 GridBagLayout 面板追加一行 label + value
+     */
+    private static void addRow(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        panel.add(new JLabel(label), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        JLabel v = new JLabel(value == null ? "" : value);
+        v.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        panel.add(v, gbc);
+    }
 }

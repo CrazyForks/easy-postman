@@ -1,7 +1,9 @@
 package com.laker.postman.service;
 
+import com.laker.postman.common.constants.ConfigPathConstants;
 import com.laker.postman.model.*;
 import com.laker.postman.service.git.SshCredentialsProvider;
+import com.laker.postman.util.SystemUtil;
 import com.laker.postman.util.WorkspaceStorageUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +53,7 @@ public class WorkspaceService {
 
     private WorkspaceService() {
         loadWorkspaces();
+        migrateDefaultWorkspaceIfNeeded();
     }
 
     public static synchronized WorkspaceService getInstance() {
@@ -260,58 +263,159 @@ public class WorkspaceService {
     }
 
     /**
+     * 版本兼容迁移：将旧版默认工作区数据从根目录迁移到 workspaces/default/
+     *
+     * <h3>旧版结构（v1）</h3>
+     * <pre>
+     *   ~/EasyPostman/
+     *       collections.json      ← 默认工作区数据（旧位置）
+     *       environments.json     ← 默认工作区数据（旧位置）
+     *       README.md             ← 可选，旧位置
+     *       .git/                 ← 若用户曾 git init（旧位置，不迁移）
+     *       .gitignore            ← 旧白名单模式（不迁移，新目录用标准模式）
+     *       workspaces/
+     *           ws1/
+     * </pre>
+     *
+     * <h3>新版结构（v2+）</h3>
+     * <pre>
+     *   ~/EasyPostman/
+     *       workspaces/
+     *           default/          ← 默认工作区（与其他工作区完全平级）
+     *               collections.json
+     *               environments.json
+     *           ws1/
+     * </pre>
+     *
+     * <h3>迁移策略</h3>
+     * <ul>
+     *   <li><b>collections.json / environments.json / README.md</b>：有旧无新则复制，幂等</li>
+     *   <li><b>.git/</b>：绝不迁移。Git 仓库的 working tree 路径与目录绑定，
+     *       直接复制会导致所有文件显示为 deleted/missing。
+     *       若旧目录是 Git 工作区，在新目录重新 git init 并提交现有数据。</li>
+     *   <li><b>.gitignore</b>：不迁移旧版白名单。新目录是独立子目录，
+     *       由 createGitignore() 生成标准模式。</li>
+     * </ul>
+     */
+    private void migrateDefaultWorkspaceIfNeeded() {
+        try {
+            String rootDir = SystemUtil.getEasyPostmanPath();
+            Path newDefaultDir = Paths.get(ConfigPathConstants.DEFAULT_WORKSPACE_DIR);
+
+            // 确保新目录存在
+            Files.createDirectories(newDefaultDir);
+
+            // 若迁移标记文件已存在，说明之前已完成迁移，直接同步 path 后返回，避免重复迁移
+            Path migratedMarker = newDefaultDir.resolve(".migrated");
+            if (Files.exists(migratedMarker)) {
+                workspaces.stream()
+                        .filter(WorkspaceStorageUtil::isDefaultWorkspace)
+                        .forEach(ws -> ws.setPath(ConfigPathConstants.DEFAULT_WORKSPACE_DIR));
+                return;
+            }
+            log.info("Migrating default workspace at: {}", rootDir);
+
+            // 1. 迁移数据文件（collections.json / environments.json / README.md）
+            //    .git/ 和 .gitignore 不在迁移范围内（见 Javadoc）
+            String[] dataFiles = {"collections.json", "environments.json", "README.md"};
+            boolean migrated = false;
+            for (String fileName : dataFiles) {
+                Path oldFile = Paths.get(rootDir, fileName);
+                Path newFile = newDefaultDir.resolve(fileName);
+                if (!Files.exists(newFile) && Files.exists(oldFile)) {
+                    Files.copy(oldFile, newFile);
+                    log.info(" ========!!!!!! Migrated default workspace file: {} -> {}", oldFile, newFile);
+                    migrated = true;
+                }
+            }
+
+            // 2. 处理 Git 仓库：旧目录有 .git/ 说明用户曾做过 git init
+            //    在新目录重新 git init，而不是复制 .git/（working tree 路径绑定旧目录，
+            //    复制后所有文件都会显示为 deleted/missing，仓库损坏）
+            //    注意：不调用 initializeGitRepository()，避免覆盖已迁移的 README.md
+            Path oldGitDir = Paths.get(rootDir, ".git");
+            Path newGitDir = newDefaultDir.resolve(".git");
+            if (Files.exists(oldGitDir) && !Files.exists(newGitDir)) {
+                Workspace defaultWs = workspaces.stream()
+                        .filter(WorkspaceStorageUtil::isDefaultWorkspace)
+                        .findFirst().orElse(null);
+                if (defaultWs != null) {
+                    defaultWs.setPath(ConfigPathConstants.DEFAULT_WORKSPACE_DIR);
+                    try (Git git = Git.init().setDirectory(new File(ConfigPathConstants.DEFAULT_WORKSPACE_DIR)).call()) {
+                        // 生成新目录专用的标准 .gitignore（不迁移旧白名单）
+                        createGitignore(defaultWs);
+                        // 提交现有数据（collections.json / environments.json / README.md 已在步骤 1 迁移完毕）
+                        git.add().addFilepattern(".").call();
+                        git.commit().setMessage("Migrate default workspace to workspaces/default/").call();
+                        // 恢复旧仓库的 branch 信息
+                        String oldBranch = defaultWs.getCurrentBranch();
+                        String actualBranch = git.getRepository().getBranch();
+                        if (oldBranch != null && !oldBranch.isEmpty() && !oldBranch.equals(actualBranch)) {
+                            git.branchCreate().setName(oldBranch).call();
+                            git.checkout().setName(oldBranch).call();
+                        } else {
+                            defaultWs.setCurrentBranch(actualBranch);
+                        }
+                        // 恢复 remote 配置（如果旧工作区已绑定远程仓库）
+                        String remoteUrl = defaultWs.getGitRemoteUrl();
+                        if (remoteUrl != null && !remoteUrl.isEmpty()) {
+                            git.remoteAdd().setName("origin").setUri(new URIish(remoteUrl)).call();
+                            log.info("Restored remote 'origin' -> {}", remoteUrl);
+                        }
+                        defaultWs.setLastCommitId(getLastCommitId(git));
+                        migrated = true;
+                        log.info("Re-initialized git repository in new default workspace dir: {}", newDefaultDir);
+                    } catch (Exception ex) {
+                        log.warn("Failed to re-init git in new default workspace dir, skipping git migration", ex);
+                    }
+                }
+            }
+
+            if (migrated) {
+                log.info("Default workspace migration complete: {}", newDefaultDir);
+            }
+
+            // 3. 同步更新内存中所有默认工作区对象的 path
+            //    （loadWorkspaces 从旧 workspaces.json 加载时可能读到旧路径）
+            workspaces.stream()
+                    .filter(WorkspaceStorageUtil::isDefaultWorkspace)
+                    .forEach(ws -> ws.setPath(ConfigPathConstants.DEFAULT_WORKSPACE_DIR));
+
+            // 4. 持久化：将更新后的 path 写回 workspaces.json
+            //    否则下次启动 loadWorkspaces 仍读到旧路径，每次都重复触发迁移逻辑
+            saveWorkspaces();
+
+            // 5. 写入迁移标记文件，下次启动时检测到后直接跳过，避免重复迁移
+            Files.writeString(migratedMarker, String.valueOf(System.currentTimeMillis()));
+            log.info("Migration marker written: {}", migratedMarker);
+
+        } catch (Exception e) {
+            log.warn("Failed to migrate default workspace, will use new path directly", e);
+        }
+    }
+
+    /**
      * 为工作区创建 .gitignore 文件
-     * 默认工作区使用白名单模式：只追踪明确指定的文件，其他全部忽略
-     * 这样即使以后新增全局配置文件，也不会被误提交
      */
     private void createGitignore(Workspace workspace) throws IOException {
         Path gitignorePath = Paths.get(workspace.getPath(), ".gitignore");
 
         List<String> ignorePatterns = new ArrayList<>();
-
-        if (WorkspaceStorageUtil.isDefaultWorkspace(workspace)) {
-            // 默认工作区：使用白名单模式（更安全）
-            ignorePatterns.add("# ==========================================");
-            ignorePatterns.add("# EasyPostman Default Workspace .gitignore");
-            ignorePatterns.add("# ==========================================");
-            ignorePatterns.add("# WHITELIST MODE: Ignore everything by default,");
-            ignorePatterns.add("# only track explicitly specified files.");
-            ignorePatterns.add("#");
-            ignorePatterns.add("# This ensures that any new global config files");
-            ignorePatterns.add("# added in the future will NOT be tracked by Git.");
-            ignorePatterns.add("");
-            ignorePatterns.add("# Ignore everything by default");
-            ignorePatterns.add("*");
-            ignorePatterns.add("");
-            ignorePatterns.add("# Explicitly track workspace-specific files");
-            ignorePatterns.add("!.gitignore");
-            ignorePatterns.add("!README.md");
-            ignorePatterns.add("!collections.json");
-            ignorePatterns.add("!environments.json");
-            ignorePatterns.add("");
-            ignorePatterns.add("# Note: All other files (global configs, settings, etc.)");
-            ignorePatterns.add("# will be automatically ignored, including any new files");
-            ignorePatterns.add("# added in the future.");
-
-        } else {
-            // 普通工作区：标准 .gitignore
-            ignorePatterns.add("# EasyPostman Workspace");
-            ignorePatterns.add("");
-            ignorePatterns.add("# Temporary files");
-            ignorePatterns.add("*.tmp");
-            ignorePatterns.add("*.bak");
-            ignorePatterns.add("*~");
-            ignorePatterns.add("");
-            ignorePatterns.add("# OS generated files");
-            ignorePatterns.add(".DS_Store");
-            ignorePatterns.add("Thumbs.db");
-        }
+        // 所有工作区统一使用标准 .gitignore
+        // 默认工作区已位于 workspaces/default/，与其他工作区平级，根目录不参与 git，无需白名单
+        ignorePatterns.add("# EasyPostman Workspace");
+        ignorePatterns.add("");
+        ignorePatterns.add("# Temporary files");
+        ignorePatterns.add("*.tmp");
+        ignorePatterns.add("*.bak");
+        ignorePatterns.add("*~");
+        ignorePatterns.add("");
+        ignorePatterns.add("# OS generated files");
+        ignorePatterns.add(".DS_Store");
+        ignorePatterns.add("Thumbs.db");
 
         Files.write(gitignorePath, ignorePatterns, StandardCharsets.UTF_8);
-        log.info("Created .gitignore for workspace '{}' (isDefault: {}, mode: {})",
-                workspace.getName(),
-                WorkspaceStorageUtil.isDefaultWorkspace(workspace),
-                WorkspaceStorageUtil.isDefaultWorkspace(workspace) ? "WHITELIST" : "STANDARD");
+        log.info("Created .gitignore for workspace '{}'", workspace.getName());
     }
 
     /**
@@ -1360,8 +1464,8 @@ public class WorkspaceService {
      * 更新工作区的 Git 认证信息
      */
     public void updateGitAuthentication(String workspaceId, GitAuthType authType,
-                                       String username, String password, String token,
-                                       String sshKeyPath, String sshPassphrase) {
+                                        String username, String password, String token,
+                                        String sshKeyPath, String sshPassphrase) {
         Workspace workspace = getWorkspaceById(workspaceId);
         if (workspace.getType() != WorkspaceType.GIT) {
             throw new IllegalStateException("Not a Git workspace");
@@ -1467,8 +1571,9 @@ public class WorkspaceService {
 
     /**
      * 获取工作区的 Git 提交历史
+     *
      * @param workspaceId 工作区ID
-     * @param maxCount 最大返回数量，0表示返回所有
+     * @param maxCount    最大返回数量，0表示返回所有
      * @return Git 提交信息列表
      */
     public List<GitCommitInfo> getGitHistory(String workspaceId, int maxCount) throws Exception {
@@ -1519,8 +1624,9 @@ public class WorkspaceService {
     /**
      * 恢复工作区到指定的 Git 提交版本
      * 使用 reset + commit 方式，保留完整的历史记录
-     * @param workspaceId 工作区ID
-     * @param commitId 提交ID
+     *
+     * @param workspaceId  工作区ID
+     * @param commitId     提交ID
      * @param createBackup 是否在恢复前创建备份提交（保存未提交的更改）
      * @return 操作结果
      */
@@ -1571,39 +1677,39 @@ public class WorkspaceService {
 
             // Step 1: 临时将 HEAD 移到目标提交（soft reset，不改变工作目录和索引）
             git.reset()
-                .setMode(org.eclipse.jgit.api.ResetCommand.ResetType.SOFT)
-                .setRef(commitId)
-                .call();
+                    .setMode(org.eclipse.jgit.api.ResetCommand.ResetType.SOFT)
+                    .setRef(commitId)
+                    .call();
 
             // Step 2: 将索引重置为目标提交的状态（现在索引=目标提交的文件状态）
             git.reset()
-                .setMode(org.eclipse.jgit.api.ResetCommand.ResetType.MIXED)  // 只重置索引，不改工作目录
-                .setRef(commitId)
-                .call();
+                    .setMode(org.eclipse.jgit.api.ResetCommand.ResetType.MIXED)  // 只重置索引，不改工作目录
+                    .setRef(commitId)
+                    .call();
 
             // Step 3: 将 HEAD 移回原位置（soft，保持索引为目标提交状态）
             git.reset()
-                .setMode(org.eclipse.jgit.api.ResetCommand.ResetType.SOFT)
-                .setRef(currentHead.getName())
-                .call();
+                    .setMode(org.eclipse.jgit.api.ResetCommand.ResetType.SOFT)
+                    .setRef(currentHead.getName())
+                    .call();
 
             // Step 4: 将索引的内容检出到工作目录
             git.checkout()
-                .setAllPaths(true)
-                .setForced(true)
-                .call();
+                    .setAllPaths(true)
+                    .setForced(true)
+                    .call();
 
             result.details += "📁 Restored files from commit: " + commitId.substring(0, 8) + "\n";
 
             // 5. 将所有更改添加到暂存区（包括删除的文件）
             git.add()
-                .addFilepattern(".")
-                .setUpdate(true)  // 包括删除
-                .call();
+                    .addFilepattern(".")
+                    .setUpdate(true)  // 包括删除
+                    .call();
             // 还需要添加新文件
             git.add()
-                .addFilepattern(".")
-                .call();
+                    .addFilepattern(".")
+                    .call();
 
             // 6. 检查是否有变化需要提交
             var statusAfterRestore = git.status().call();
@@ -1618,8 +1724,8 @@ public class WorkspaceService {
                     restoreMessage += "\n\nBackup: " + backupCommitId.substring(0, 8);
                 }
                 var restoreCommit = git.commit()
-                    .setMessage(restoreMessage)
-                    .call();
+                        .setMessage(restoreMessage)
+                        .call();
 
                 result.details += "✅ Created restore commit: " + restoreCommit.getName().substring(0, 8) + "\n";
                 result.details += "   (All history is preserved!)\n\n";
@@ -1656,8 +1762,9 @@ public class WorkspaceService {
 
     /**
      * 查看指定提交的详细信息
+     *
      * @param workspaceId 工作区ID
-     * @param commitId 提交ID
+     * @param commitId    提交ID
      * @return 提交详细信息
      */
     public String getCommitDetails(String workspaceId, String commitId) throws Exception {
@@ -1675,7 +1782,7 @@ public class WorkspaceService {
 
                 details.append("Commit: ").append(commit.getName()).append("\n");
                 details.append("Author: ").append(commit.getAuthorIdent().getName())
-                       .append(" <").append(commit.getAuthorIdent().getEmailAddress()).append(">\n");
+                        .append(" <").append(commit.getAuthorIdent().getEmailAddress()).append(">\n");
                 details.append("Date: ").append(new java.util.Date(commit.getCommitTime() * 1000L)).append("\n");
                 details.append("\n").append(commit.getFullMessage()).append("\n\n");
 

@@ -40,13 +40,18 @@ public class WorkspaceStorageUtil {
 
     /**
      * 获取默认工作区对象
+     * <p>
+     * 默认工作区路径为 {@code ~/EasyPostman/workspaces/default/}，
+     * 与其他子工作区平级，使根目录完全不参与 git 管理，
+     * 从根本上避免嵌套 git 仓库问题。
+     * </p>
      */
     public static Workspace getDefaultWorkspace() {
         Workspace ws = new Workspace();
         ws.setId(DEFAULT_WORKSPACE_ID);
         ws.setName(DEFAULT_WORKSPACE_NAME);
         ws.setType(WorkspaceType.LOCAL);
-        ws.setPath(SystemUtil.getEasyPostmanPath());
+        ws.setPath(ConfigPathConstants.DEFAULT_WORKSPACE_DIR);
         ws.setDescription(DEFAULT_WORKSPACE_DESCRIPTION);
         ws.setCreatedAt(System.currentTimeMillis());
         ws.setUpdatedAt(System.currentTimeMillis());

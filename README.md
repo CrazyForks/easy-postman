@@ -1,21 +1,27 @@
 <div align="center">
 
-[简体中文](README_zh.md) | English
-
-</div>
+<img src="docs/icon.png" alt="EasyPostman Logo" width="100" />
 
 # EasyPostman
 
-> 🚀 An open-source API debugging and stress testing tool inspired by Postman and a simplified JMeter, optimized for developers with a clean UI and powerful features. Built-in Git integration for team collaboration and version control.
+**An open-source API debugging & performance testing desktop app**  
+*Inspired by Postman · Powered by Java · Built for developers*
 
-![GitHub license](https://img.shields.io/github/license/lakernote/easy-postman)
-![Java](https://img.shields.io/badge/Java-17+-orange)
-![Platform](https://img.shields.io/badge/Platform-Windows%20|%20macOS%20|%20Linux-blue)
+[![GitHub license](https://img.shields.io/github/license/lakernote/easy-postman?style=flat-square)](https://github.com/lakernote/easy-postman/blob/main/LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/lakernote/easy-postman?style=flat-square&color=brightgreen)](https://github.com/lakernote/easy-postman/releases)
+[![GitHub stars](https://img.shields.io/github/stars/lakernote/easy-postman?style=flat-square&color=yellow)](https://github.com/lakernote/easy-postman/stargazers)
+[![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/lakernote/easy-postman/releases)
+
+[简体中文](README_zh.md) · [English](README.md) · [📦 Download](https://github.com/lakernote/easy-postman/releases) · [📖 Docs](docs/FEATURES.md) · [💬 Discuss](https://github.com/lakernote/easy-postman/discussions)
+
+</div>
 
 ---
 
 ## 📖 Table of Contents
 
+- [💡 About](#-about)
 - [✨ Features](#-features)
 - [📦 Download](#-download)
 - [🚀 Quick Start](#-quick-start)
@@ -31,12 +37,9 @@
 
 EasyPostman provides developers with a **local, privacy-first** API debugging experience comparable to Postman, plus simplified JMeter-style performance testing. Built with Java Swing for cross-platform support, it works completely offline and includes built-in Git workspace support for team collaboration and version control.
 
-### 🔥 Philosophy
-
-- **🎯 Focus on Core Features** - Simple yet powerful, rich features without bloat
-- **🔒 Privacy First** - 100% local storage, no cloud sync, your data stays private
-- **🚀 Performance Oriented** - Native Java app, fast startup, smooth experience
-
+| 🎯 Focus on Core | 🔒 Privacy First | 🚀 Performance |
+|:---:|:---:|:---:|
+| Simple yet powerful, rich features without bloat | 100% local storage, no cloud sync, your data stays private | Native Java app, fast startup, smooth experience |
 
 ---
 
@@ -86,29 +89,23 @@ EasyPostman provides developers with a **local, privacy-first** API debugging ex
 
 ### Platform Downloads
 
-| Platform | Download | Notes |
-|----------|----------|-------|
-| 🍎 **macOS (Apple Silicon)** | `EasyPostman-{version}-macos-arm64.dmg` | For M1/M2/M3/M4 Macs |
-| 🍏 **macOS (Intel)** | `EasyPostman-{version}-macos-x86_64.dmg` | For Intel-based Macs |
-| 🪟 **Windows (Installer)** | `EasyPostman-{version}-windows-x64.exe` | Installer with auto-update |
-| 🪟 **Windows (Portable)** | `EasyPostman-{version}-windows-x64-portable.zip` | No installation required |
-| 🐧 **Ubuntu/Debian** | `easypostman_{version}_amd64.deb` | DEB package |
-| ☕ **Cross-platform** | `easy-postman-{version}.jar` | Requires Java 17+ |
+| Platform | Package | Notes |
+|----------|---------|-------|
+| 🍎 **macOS (Apple Silicon)** | `EasyPostman-{version}-macos-arm64.dmg` | M1/M2/M3/M4 |
+| 🍏 **macOS (Intel)** | `EasyPostman-{version}-macos-x86_64.dmg` | Intel-based Mac |
+| 🪟 **Windows (Installer)** | `EasyPostman-{version}-windows-x64.exe` | Auto-update support |
+| 🪟 **Windows (Portable)** | `EasyPostman-{version}-windows-x64-portable.zip` | No install needed |
+| 🐧 **Ubuntu / Debian** | `easypostman_{version}_amd64.deb` | DEB package |
+| ☕ **Cross-platform JAR** | `easy-postman-{version}.jar` | Requires Java 17+ |
 
 > ⚠️ **First Run Notice**
-> 
-> - **Windows**: If you see SmartScreen warning → Click "More info" → "Run anyway"
-> - **macOS**: If "cannot be opened" → Right-click app → Select "Open" → Click "Open"
-> 
-> The app is completely open-source and safe. These warnings appear because we don't purchase code signing certificates.
+>
+> - **Windows**: SmartScreen warning → "More info" → "Run anyway"
+> - **macOS**: "Cannot be opened" → Right-click → "Open" → "Open"
+>
+> The app is 100% open-source. Warnings appear because we don't purchase code signing certificates.
 
-### Gitee Mirror (China) 🌏
-
-Due to storage limitations, Gitee mirror only provides:
-- macOS (Apple Silicon) DMG
-- Windows Installer and Portable ZIP
-
-For other platforms, please use GitHub Releases.
+> 🌏 **Gitee Mirror** only provides macOS (ARM) DMG and Windows packages. For other platforms, use GitHub Releases.
 
 ---
 
@@ -116,22 +113,22 @@ For other platforms, please use GitHub Releases.
 
 ### Option 1: Download Pre-built Release
 
-1. Download the appropriate package for your platform from [Releases](https://github.com/lakernote/easy-postman/releases)
+1. Grab the package for your platform from [Releases](https://github.com/lakernote/easy-postman/releases)
 2. Install and run:
-   - **macOS**: Open DMG, drag to Applications
-   - **Windows Installer**: Run EXE, follow installation wizard
-   - **Windows Portable**: Extract ZIP, run `EasyPostman.exe`
-   - **Linux DEB**: `sudo dpkg -i easypostman_{version}_amd64.deb`
-   - **JAR**: `java -jar easy-postman-{version}.jar`
+
+| Platform | Command / Action |
+|----------|-----------------|
+| macOS | Open DMG → drag to Applications |
+| Windows Installer | Run `.exe`, follow wizard |
+| Windows Portable | Extract ZIP → run `EasyPostman.exe` |
+| Linux DEB | `sudo dpkg -i easypostman_{version}_amd64.deb` |
+| JAR | `java -jar easy-postman-{version}.jar` |
 
 ### Option 2: Build from Source
 
 ```bash
-# Clone repository
 git clone https://github.com/lakernote/easy-postman.git
 cd easy-postman
-
-# Build and run
 mvn clean package
 java -jar target/easy-postman-*.jar
 ```
@@ -140,10 +137,10 @@ java -jar target/easy-postman-*.jar
 
 ### First Steps
 
-1. **Create a Workspace** - Choose Local (personal) or Git (team collaboration)
-2. **Create a Collection** - Organize your API requests
-3. **Send Your First Request** - Enter URL, configure params, click Send
-4. **Set Up Environments** - Switch between dev/test/prod easily
+1. **Create a Workspace** — Local (personal) or Git (team)
+2. **Create a Collection** — Organize your API requests
+3. **Send Your First Request** — Enter URL, configure params, click Send
+4. **Set Up Environments** — Switch between dev / test / prod easily
 
 ---
 
@@ -151,41 +148,32 @@ java -jar target/easy-postman-*.jar
 
 <div align="center">
 
-### Main Interface
-![Home](docs/home-en.png)
+| Home | Workspaces |
+|:----:|:----------:|
+| ![Home](docs/home-en.png) | ![Workspaces](docs/workspaces.png) |
 
-### Workspace Management
-![Workspaces](docs/workspaces.png)
-
-### Collections & API Testing
-![Collections](docs/collections.png)
-
-### Performance Testing
-![Performance](docs/performance.png)
+| Collections & API Testing | Performance Testing |
+|:-------------------------:|:-------------------:|
+| ![Collections](docs/collections.png) | ![Performance](docs/performance.png) |
 
 </div>
 
 📸 **[View All Screenshots →](docs/SCREENSHOTS.md)**
+
 ---
 
 ## 🤝 Contributing
 
-We welcome all forms of contribution! Whether it's bug reports, feature requests, or code contributions.
+We welcome all forms of contribution — bug reports, feature requests, code, or docs!
 
-### Ways to Contribute
+| Type | How |
+|------|-----|
+| 🐛 Bug Report | [Open an issue](https://github.com/lakernote/easy-postman/issues/new/choose) |
+| ✨ Feature Request | [Share your idea](https://github.com/lakernote/easy-postman/issues/new/choose) |
+| 💻 Code | Fork → branch → PR |
+| 📝 Docs | Fix typos, add examples, translate |
 
-- 🐛 **Report Bugs** - Use our [bug report template](https://github.com/lakernote/easy-postman/issues/new/choose)
-- ✨ **Request Features** - Share your ideas via [feature request](https://github.com/lakernote/easy-postman/issues/new/choose)
-- 💻 **Submit Code** - Fork, code, and create a pull request
-- 📝 **Improve Docs** - Fix typos, add examples, translate
-
-### Automated Checks
-
-When you submit a PR, it will automatically go through:
-- ✅ Build and compilation check
-- ✅ Test execution
-- ✅ Code quality validation
-- ✅ PR format verification
+Every PR triggers automated checks: build, tests, code quality, and format validation.
 
 📖 **[Contributing Guide →](.github/CONTRIBUTING.md)**
 
@@ -193,15 +181,17 @@ When you submit a PR, it will automatically go through:
 
 ## 📚 Documentation
 
-- 📖 **[Feature Details](docs/FEATURES.md)** - Comprehensive feature documentation
-- 🏗️ **[System Architecture](docs/ARCHITECTURE.md)** - Technical stack and architecture
-- 🚀 **[Build Guide](docs/BUILD.md)** - Build from source and generate installers
-- 🖼️ **[Screenshots Gallery](docs/SCREENSHOTS.md)** - All application screenshots
-- 📝 **[Script API Reference](docs/SCRIPT_API_REFERENCE_zh.md)** - Pre-request and test script API
-- 📝 **[Script Snippets Quick Reference](docs/SCRIPT_SNIPPETS_QUICK_REFERENCE.md)** - Built-in code snippets
-- 🔐 **[Client Certificates](docs/CLIENT_CERTIFICATES.md)** - mTLS configuration
-- 🐧 **[Linux Build Guide](docs/LINUX_BUILD.md)** - Building on Linux
-- ❓ **[FAQ](docs/FQA.MD)** - Frequently asked questions
+| Doc | Description |
+|-----|-------------|
+| 📖 [Features](docs/FEATURES.md) | Comprehensive feature documentation |
+| 🏗️ [Architecture](docs/ARCHITECTURE.md) | Technical stack and design |
+| 🚀 [Build Guide](docs/BUILD.md) | Build from source & generate installers |
+| 🖼️ [Screenshots](docs/SCREENSHOTS.md) | All application screenshots |
+| 📝 [Script API Reference](docs/SCRIPT_API_REFERENCE_zh.md) | Pre-request & test script API |
+| 📝 [Script Snippets](docs/SCRIPT_SNIPPETS_QUICK_REFERENCE.md) | Built-in code snippet reference |
+| 🔐 [Client Certificates](docs/CLIENT_CERTIFICATES.md) | mTLS configuration |
+| 🐧 [Linux Build](docs/LINUX_BUILD.md) | Building on Linux |
+| ❓ [FAQ](docs/FQA.MD) | Frequently asked questions |
 
 ---
 
@@ -210,84 +200,63 @@ When you submit a PR, it will automatically go through:
 <details>
 <summary><b>Q: Why local storage instead of cloud sync?</b></summary>
 
-A: We value developer privacy. Local storage ensures your API data is never leaked to third parties. You can optionally use Git workspace for team collaboration while maintaining control over your data.
+We value developer privacy. Local storage ensures your API data is never leaked to third parties. Use Git workspace for team collaboration while maintaining full control over your data.
 </details>
 
 <details>
 <summary><b>Q: How to import Postman data?</b></summary>
 
-A: In the Collections view, click **Import** and select a Postman v2.1 JSON file. The tool will automatically convert collections, requests, and environments.
+In the Collections view, click **Import** and select a Postman v2.1 JSON file. Collections, requests, and environments are converted automatically.
 </details>
 
 <details>
 <summary><b>Q: Why does Windows/macOS show security warnings?</b></summary>
 
-**Windows SmartScreen**: Not purchasing a code signing certificate (~$100-400/year) triggers warnings.
-- **Solution**: Click "More info" → "Run anyway"
-- As download count increases, warnings will gradually decrease
+- **Windows SmartScreen**: No code signing cert (~$100–400/year). → Click "More info" → "Run anyway". Warnings decrease as download count grows.
+- **macOS Gatekeeper**: No Apple Developer cert ($99/year). → Right-click → "Open", or run: `sudo xattr -rd com.apple.quarantine /Applications/EasyPostman.app`
 
-**macOS Gatekeeper**: Not purchasing Apple Developer certificate ($99/year) + notarization triggers warnings.
-- **Solution**: Right-click the app → Select "Open"
-- Or run in Terminal: `sudo xattr -rd com.apple.quarantine /Applications/EasyPostman.app`
-
-This project is **completely open-source** and the code can be reviewed on GitHub.
+This project is **fully open-source** and auditable on GitHub.
 </details>
 
 <details>
 <summary><b>Q: Does it support team collaboration?</b></summary>
 
-A: ✅ **Yes!** Use **Git workspace** to:
-- Share API collections and environments with your team
-- Track changes with version control (commit, push, pull)
-- Work across multiple devices
-- Collaborate without cloud services
+✅ Yes — use **Git workspace** to share collections & environments, track changes (commit/push/pull), and collaborate across devices without any cloud service.
 </details>
 
 <details>
-<summary><b>Q: Are workspaces isolated from each other?</b></summary>
+<summary><b>Q: Are workspaces isolated?</b></summary>
 
-A: Yes. Each workspace is completely independent with its own collections, environments, and history. Switching workspaces provides full data isolation.
+Yes. Each workspace has its own collections, environments, and history. Switching workspaces provides complete data isolation.
 </details>
 
 <details>
 <summary><b>Q: Which Git platforms are supported?</b></summary>
 
-A: All standard Git platforms including:
-- GitHub
-- Gitee
-- GitLab
-- Bitbucket
-- Self-hosted Git servers
-
-Just provide a standard Git URL (HTTPS or SSH).
+All standard Git platforms: GitHub, Gitee, GitLab, Bitbucket, and self-hosted Git servers (HTTPS or SSH).
 </details>
 
 ---
 
 ## 💖 Support the Project
 
-If you find EasyPostman helpful:
+If EasyPostman helps you, consider:
 
-- ⭐ **Star this repo** - Show your support!
-- 🍴 **Fork and contribute** - Help make it better
-- 📢 **Recommend to friends** - Spread the word
-- 💬 **Join WeChat group** - Add **lakernote** for direct communication
-- 💬 **GitHub Discussions** - [Ask questions and share ideas](https://github.com/lakernote/easy-postman/discussions)
-
----
-
-## 🔗 Links
-
-- 🌟 **GitHub**: [https://github.com/lakernote/easy-postman](https://github.com/lakernote/easy-postman)
-- 🏠 **Gitee**: [https://gitee.com/lakernote/easy-postman](https://gitee.com/lakernote/easy-postman)
-- 💬 **Discussions**: [https://github.com/lakernote/easy-postman/discussions](https://github.com/lakernote/easy-postman/discussions)
-- 📦 **Releases**: [https://github.com/lakernote/easy-postman/releases](https://github.com/lakernote/easy-postman/releases)
+- ⭐ **Star this repo** — it means a lot!
+- 🍴 **Fork & contribute** — help make it better
+- 📢 **Share with friends** — spread the word
+- 💬 **WeChat group** — add **lakernote** for direct communication
+- 💬 **GitHub Discussions** — [ask questions & share ideas](https://github.com/lakernote/easy-postman/discussions)
 
 ---
 
 ## ⭐ Star History
 
+<div align="center">
+
 [![Star History Chart](https://api.star-history.com/svg?repos=lakernote/easy-postman&type=date&legend=top-left)](https://www.star-history.com/#lakernote/easy-postman&type=date&legend=top-left)
+
+</div>
 
 ---
 
@@ -295,16 +264,22 @@ If you find EasyPostman helpful:
 
 Thanks to these awesome open-source projects:
 
-- [FlatLaf](https://github.com/JFormDesigner/FlatLaf) - Modern Swing theme
-- [RSyntaxTextArea](https://github.com/bobbylight/RSyntaxTextArea) - Syntax highlighting editor
-- [OkHttp](https://github.com/square/okhttp) - HTTP client
-- [Termora](https://github.com/TermoraDev/termora) - Excellent terminal emulator
+| Project | Role |
+|---------|------|
+| [FlatLaf](https://github.com/JFormDesigner/FlatLaf) | Modern Swing theme |
+| [RSyntaxTextArea](https://github.com/bobbylight/RSyntaxTextArea) | Syntax highlighting editor |
+| [OkHttp](https://github.com/square/okhttp) | HTTP client |
+| [Termora](https://github.com/TermoraDev/termora) | Terminal emulator inspiration |
 
 ---
 
 <div align="center">
 
-**Make API debugging easier, make performance testing more intuitive**
+**Make API debugging easier. Make performance testing more intuitive.**
+
+[![GitHub](https://img.shields.io/badge/GitHub-lakernote-181717?style=flat-square&logo=github)](https://github.com/lakernote)
+&nbsp;
+[![Gitee](https://img.shields.io/badge/Gitee-lakernote-C71D23?style=flat-square&logo=gitee)](https://gitee.com/lakernote)
 
 Made with ❤️ by [laker](https://github.com/lakernote)
 

@@ -147,23 +147,40 @@ public class GroupInheritanceHelper {
     }
 
     /**
-     * 应用认证继承（就近原则：从内到外查找第一个有认证的分组）
+     * 应用认证继承（就近原则：从内到外查找，遇到 None 立即停止）
+     * <p>
+     * 继承规则（与 Postman 行为一致）：
+     * - Inherit：跳过，继续向上查找
+     * - None：阻断继承链，停止查找（明确设置为"无认证"）
+     * - Basic/Bearer 等实际认证：应用并停止
      */
     private static void applyAuthInheritance(HttpRequestItem item, List<RequestGroup> groupChain) {
         if (!AuthType.INHERIT.getConstant().equals(item.getAuthType())) {
             return; // 不需要继承认证
         }
 
-        // 从内到外查找第一个有认证的分组
+        // 从内到外查找
         for (int i = groupChain.size() - 1; i >= 0; i--) {
             RequestGroup group = groupChain.get(i);
-            if (group.hasAuth()) {
-                item.setAuthType(group.getAuthType());
-                item.setAuthUsername(group.getAuthUsername());
-                item.setAuthPassword(group.getAuthPassword());
-                item.setAuthToken(group.getAuthToken());
-                return; // 找到后立即返回
+            String groupAuthType = group.getAuthType();
+
+            if (groupAuthType == null || AuthType.INHERIT.getConstant().equals(groupAuthType)) {
+                // Inherit：继续向上查找
+                continue;
             }
+
+            if (AuthType.NONE.getConstant().equals(groupAuthType)) {
+                // None：明确阻断继承链，停止查找（最终无认证）
+                item.setAuthType(AuthType.NONE.getConstant());
+                return;
+            }
+
+            // Basic/Bearer 等实际认证：应用并停止
+            item.setAuthType(group.getAuthType());
+            item.setAuthUsername(group.getAuthUsername());
+            item.setAuthPassword(group.getAuthPassword());
+            item.setAuthToken(group.getAuthToken());
+            return;
         }
     }
 

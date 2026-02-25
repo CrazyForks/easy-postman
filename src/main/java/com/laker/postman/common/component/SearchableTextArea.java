@@ -127,7 +127,7 @@ public class SearchableTextArea extends JPanel {
         // Cmd+F / Ctrl+F - 显示搜索
         KeyStroke findKey = KeyStroke.getKeyStroke(KeyEvent.VK_F,
                 Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx());
-        textArea.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(findKey, "showSearch");
+        textArea.getInputMap(JComponent.WHEN_FOCUSED).put(findKey, "showSearch");
         textArea.getActionMap().put("showSearch", new AbstractAction() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
@@ -141,7 +141,7 @@ public class SearchableTextArea extends JPanel {
             KeyStroke replaceKey = KeyStroke.getKeyStroke(KeyEvent.VK_F,
                     Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | java.awt.event.InputEvent.SHIFT_DOWN_MASK);
 
-            textArea.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(replaceKey, "showReplace");
+            textArea.getInputMap(JComponent.WHEN_FOCUSED).put(replaceKey, "showReplace");
             textArea.getActionMap().put("showReplace", new AbstractAction() {
                 @Override
                 public void actionPerformed(java.awt.event.ActionEvent e) {

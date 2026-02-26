@@ -1,11 +1,8 @@
 package com.laker.postman.common.themes;
 
+import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 import com.formdev.flatlaf.util.SystemInfo;
-import com.laker.postman.util.I18nUtil;
-import com.laker.postman.util.MessageKeys;
-import com.laker.postman.util.NotificationUtil;
-import com.laker.postman.util.UIRefreshManager;
-import com.laker.postman.util.UserSettingsUtil;
+import com.laker.postman.util.*;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,21 +34,34 @@ public class SimpleThemeManager {
     }
 
     /**
-     * 切换到亮色主题
+     * 切换到亮色主题（带动画过渡）
      */
     public static void switchToLightTheme() {
         if (!THEME_LIGHT.equals(currentTheme)) {
-            applyTheme(THEME_LIGHT, true);
+            switchWithAnimation(() -> applyTheme(THEME_LIGHT, true));
         }
     }
 
     /**
-     * 切换到暗色主题
+     * 切换到暗色主题（带动画过渡）
      */
     public static void switchToDarkTheme() {
         if (!THEME_DARK.equals(currentTheme)) {
-            applyTheme(THEME_DARK, true);
+            switchWithAnimation(() -> applyTheme(THEME_DARK, true));
         }
+    }
+
+    /**
+     * 使用动画过渡执行主题切换。
+     * 先截取当前界面快照，再通过 invokeLater 在下一帧执行切换，
+     * 保证快照完整渲染后动画才开始，避免 EDT 阻塞导致动画失效。
+     */
+    private static void switchWithAnimation(Runnable themeSwitch) {
+        FlatAnimatedLafChange.showSnapshot();
+        SwingUtilities.invokeLater(() -> {
+            themeSwitch.run();
+            FlatAnimatedLafChange.hideSnapshotWithAnimation();
+        });
     }
 
     /**

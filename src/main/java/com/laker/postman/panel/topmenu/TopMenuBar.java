@@ -1,6 +1,5 @@
 package com.laker.postman.panel.topmenu;
 
-import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 import com.formdev.flatlaf.extras.FlatDesktop;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.formdev.flatlaf.util.SystemInfo;
@@ -239,29 +238,14 @@ public class TopMenuBar extends SingletonBaseMenuBar implements IRefreshable {
         }
 
         // 使用动画效果切换主题
-        lightItem.addActionListener(e -> switchThemeWithAnimation(SimpleThemeManager::switchToLightTheme));
-        darkItem.addActionListener(e -> switchThemeWithAnimation(SimpleThemeManager::switchToDarkTheme));
+        lightItem.addActionListener(e -> SimpleThemeManager.switchToLightTheme());
+        darkItem.addActionListener(e -> SimpleThemeManager.switchToDarkTheme());
 
         themeMenu.add(lightItem);
         themeMenu.add(darkItem);
         add(themeMenu);
     }
 
-    /**
-     * 使用动画效果切换主题
-     *
-     * @param themeSwitch 主题切换逻辑
-     */
-    private void switchThemeWithAnimation(Runnable themeSwitch) {
-        // 开始动画切换
-        FlatAnimatedLafChange.showSnapshot();
-
-        // 执行主题切换
-        themeSwitch.run();
-
-        // 隐藏快照，显示动画过渡效果
-        FlatAnimatedLafChange.hideSnapshotWithAnimation();
-    }
 
     private void addSettingMenu() {
         JMenu settingMenu = new JMenu(I18nUtil.getMessage(MessageKeys.MENU_SETTINGS));

@@ -205,19 +205,7 @@ jobs:
           
           Write-Host "✅ Created portable version: $zipName"
 
-      - name: Upload to Release（上传到 GitHub Release）
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*-portable.zip
-          fail_on_unmatched_files: true
-          tag_name: ${{ github.ref_name }}
-          overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload as Artifact（手动触发时上传为构建产物）
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload as Artifact（上传为构建产物，供统一 Release job 使用）
         uses: actions/upload-artifact@v4
         with:
           name: EasyPostman-Windows-Portable
@@ -411,19 +399,7 @@ jobs:
             exit 1
           }
 
-      - name: Upload to Release（上传到 GitHub Release）
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.exe
-          fail_on_unmatched_files: true
-          tag_name: ${{ github.ref_name }}
-          overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload as Artifact（手动触发时上传为构建产物）
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload as Artifact（上传为构建产物，供统一 Release job 使用）
         uses: actions/upload-artifact@v4
         with:
           name: EasyPostman-Windows-EXE
@@ -537,19 +513,7 @@ jobs:
           mv dist/EasyPostman-$VERSION.dmg dist/EasyPostman-$VERSION-macos-x86_64.dmg
           echo "✅ Created: EasyPostman-$VERSION-macos-x86_64.dmg"
 
-      - name: Upload to Release（上传到 GitHub Release）
-        if: github.event_name == 'release'  # 只在 Release 触发时上传
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*-macos-x86_64.dmg
-          fail_on_unmatched_files: true
-          tag_name: ${{ github.ref_name }}
-          overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload as Artifact（手动触发时上传为构建产物）
-        if: github.event_name == 'workflow_dispatch'  # 只在手动触发时上传为 Artifact
+      - name: Upload as Artifact（上传为构建产物，供统一 Release job 使用）
         uses: actions/upload-artifact@v4
         with:
           name: EasyPostman-macOS-Intel-DMG
@@ -663,19 +627,7 @@ jobs:
           mv dist/EasyPostman-$VERSION.dmg dist/EasyPostman-$VERSION-macos-arm64.dmg
           echo "✅ Created: EasyPostman-$VERSION-macos-arm64.dmg"
 
-      - name: Upload to Release（上传到 GitHub Release）
-        if: github.event_name == 'release'  # 只在 Release 触发时上传
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*-macos-arm64.dmg
-          fail_on_unmatched_files: true
-          tag_name: ${{ github.ref_name }}
-          overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload as Artifact（手动触发时上传为构建产物）
-        if: github.event_name == 'workflow_dispatch'  # 只在手动触发时上传为 Artifact
+      - name: Upload as Artifact（上传为构建产物，供统一 Release job 使用）
         uses: actions/upload-artifact@v4
         with:
           name: EasyPostman-macOS-ARM-DMG
@@ -702,19 +654,7 @@ jobs:
           name: app-jar
           path: dist
 
-      - name: Upload to Release（上传到 GitHub Release）
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.jar
-          fail_on_unmatched_files: true
-          tag_name: ${{ github.ref_name }}
-          overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload as Artifact（手动触发时上传为构建产物）
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload as Artifact（上传为构建产物，供统一 Release job 使用）
         uses: actions/upload-artifact@v4
         with:
           name: EasyPostman-Standalone-JAR
@@ -821,19 +761,7 @@ jobs:
           # 执行 jpackage
           jpackage "${JPACKAGE_ARGS[@]}"
 
-      - name: Upload to Release（上传到 GitHub Release）
-        if: github.event_name == 'release'  # 只在 Release 触发时上传
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.deb
-          fail_on_unmatched_files: true
-          tag_name: ${{ github.ref_name }}
-          overwrite_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload as Artifact（手动触发时上传为构建产物）
-        if: github.event_name == 'workflow_dispatch'  # 只在手动触发时上传为 Artifact
+      - name: Upload as Artifact（上传为构建产物，供统一 Release job 使用）
         uses: actions/upload-artifact@v4
         with:
           name: EasyPostman-Ubuntu-DEB
@@ -847,6 +775,41 @@ jobs:
           name: release-deb
           path: dist/*.deb
           retention-days: 1
+
+  # 统一上传所有平台文件到 GitHub Release（避免并发冲突）
+  upload-to-github-release:
+    name: Upload All to GitHub Release（统一上传到 GitHub Release）
+    if: github.event_name == 'release' && always()
+    needs: [ get-version, build-windows-portable, build-windows-exe, build-macos-intel, build-macos-arm, build-jar, build-ubuntu ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all release artifacts（下载所有平台构建产物）
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: List downloaded files（列出所有下载文件）
+        run: |
+          echo "📦 Downloaded artifacts:"
+          find all-artifacts -type f | sort
+
+      - name: Upload all files to GitHub Release（一次性上传所有文件到 Release）
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            all-artifacts/*-portable.zip
+            all-artifacts/*.exe
+            all-artifacts/*-macos-x86_64.dmg
+            all-artifacts/*-macos-arm64.dmg
+            all-artifacts/*.jar
+            all-artifacts/*.deb
+          fail_on_unmatched_files: false
+          tag_name: ${{ github.ref_name }}
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # 检查是否至少有一个构建成功
   check-any-build-success:

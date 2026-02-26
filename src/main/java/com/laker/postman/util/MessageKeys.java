@@ -42,6 +42,7 @@ public final class MessageKeys {
     // ============ 更新相关 ============
     public static final String UPDATE_NEW_VERSION_AVAILABLE = "update.new_version_available";
     public static final String UPDATE_LATER = "update.later";
+    public static final String UPDATE_NOW = "update.now";
     public static final String UPDATE_VIEW_DETAILS = "update.view_details";
     public static final String UPDATE_MANUAL_DOWNLOAD = "update.manual_download";
     public static final String UPDATE_DOWNLOADING = "update.downloading";
@@ -50,6 +51,13 @@ public final class MessageKeys {
     public static final String UPDATE_DOWNLOAD_CANCELLED = "update.download_cancelled";
     public static final String UPDATE_DOWNLOAD_FAILED = "update.download_failed";
     public static final String UPDATE_NO_INSTALLER_FOUND = "update.no_installer_found";
+    public static final String UPDATE_WHATS_NEW = "update.whats_new";
+    public static final String UPDATE_SAVE_TIP = "update.save_tip";
+    public static final String UPDATE_NO_CHANGELOG = "update.no_changelog";
+    public static final String UPDATE_DEFAULT_CHANGELOG = "update.default_changelog";
+    public static final String UPDATE_CODE_EXAMPLE = "update.code_example";
+    public static final String UPDATE_DOWNLOADED = "update.downloaded";
+    public static final String UPDATE_SPEED = "update.speed";
 
     // ============ 全量静默更新相关 ============
     public static final String UPDATE_INSTALLER_INSTALL_PROMPT = "update.installer.install.prompt";

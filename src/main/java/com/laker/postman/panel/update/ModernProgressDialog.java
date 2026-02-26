@@ -1,22 +1,25 @@
 package com.laker.postman.panel.update;
 
-import com.laker.postman.common.constants.ModernColors;
+import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.IconUtil;
 import com.laker.postman.util.MessageKeys;
+import com.laker.postman.common.constants.ModernColors;
 import lombok.Setter;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 /**
  * 现代化下载进度对话框 - 简洁直观的进度显示
  */
 public class ModernProgressDialog {
+
+    private static final long KB = 1024L;
+    private static final long MB = 1024 * KB;
+    private static final long GB = 1024 * MB;
 
     private final JDialog dialog;
     private final JProgressBar progressBar;
@@ -34,23 +37,20 @@ public class ModernProgressDialog {
         dialog.setResizable(false);
         dialog.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 
-        // 初始化组件
-        percentLabel = new JLabel("0%", SwingConstants.CENTER);
-        statusLabel = new JLabel(I18nUtil.getMessage(MessageKeys.UPDATE_CONNECTING), SwingConstants.CENTER);
-        progressBar = new JProgressBar(0, 100);
-        sizeLabel = new JLabel("-- / -- MB");
-        speedLabel = new JLabel("-- KB/s");
-        cancelButton = createCancelButton();
+        percentLabel  = new JLabel("0%", SwingConstants.CENTER);
+        statusLabel   = new JLabel(I18nUtil.getMessage(MessageKeys.UPDATE_CONNECTING), SwingConstants.CENTER);
+        progressBar   = new JProgressBar(0, 100);
+        sizeLabel     = new JLabel("-- / -- MB");
+        speedLabel    = new JLabel("-- KB/s");
+        cancelButton  = createCancelButton();
 
-        JPanel panel = createContentPanel();
-        dialog.setContentPane(panel);
+        dialog.setContentPane(createContentPanel());
         dialog.pack();
         dialog.setLocationRelativeTo(parent);
     }
 
     private JPanel createContentPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(ModernColors.getCardBackgroundColor());  // 使用卡片背景色，主题适配
         mainPanel.setBorder(new EmptyBorder(32, 40, 28, 40));
 
         JPanel contentPanel = new JPanel();
@@ -64,20 +64,19 @@ public class ModernProgressDialog {
         contentPanel.add(Box.createVerticalStrut(16));
 
         // 状态文本
-        statusLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, +4));
-        statusLabel.setForeground(ModernColors.getTextPrimary());  // 主题适配的主文本色
+        statusLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, 4));
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(statusLabel);
         contentPanel.add(Box.createVerticalStrut(20));
 
         // 百分比
-        percentLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, +20));
-        percentLabel.setForeground(ModernColors.PRIMARY);  // 品牌色，强调进度
+        percentLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, 20));
+        percentLabel.setForeground(ModernColors.PRIMARY);
         percentLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(percentLabel);
         contentPanel.add(Box.createVerticalStrut(12));
 
-        // 进度条
+        // 进度条（跟随 FlatLaf 主题，不硬设背景色）
         progressBar.setPreferredSize(new Dimension(400, 8));
         progressBar.setMaximumSize(new Dimension(400, 8));
         progressBar.setStringPainted(false);
@@ -92,7 +91,6 @@ public class ModernProgressDialog {
         contentPanel.add(detailsPanel);
         contentPanel.add(Box.createVerticalStrut(24));
 
-        // 取消按钮
         cancelButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(cancelButton);
 
@@ -106,59 +104,41 @@ public class ModernProgressDialog {
         panel.setPreferredSize(new Dimension(400, 60));
         panel.setMaximumSize(new Dimension(400, 60));
 
-        // 大小信息
-        JLabel sizeTitle = new JLabel(I18nUtil.isChinese() ? "已下载" : "Downloaded");
-        sizeTitle.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
-        sizeTitle.setForeground(ModernColors.getTextHint());
-        panel.add(sizeTitle);
+        JLabel sizeTitle  = makeHintLabel(I18nUtil.getMessage(MessageKeys.UPDATE_DOWNLOADED));
+        JLabel speedTitle = makeHintLabel(I18nUtil.getMessage(MessageKeys.UPDATE_SPEED));
 
-        sizeLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, +1));
-        sizeLabel.setForeground(ModernColors.getTextPrimary());  // 主题适配的主文本色
+        sizeLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, 1));
         sizeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        panel.add(sizeLabel);
 
-        // 速度信息
-        JLabel speedTitle = new JLabel(I18nUtil.isChinese() ? "下载速度" : "Speed");
-        speedTitle.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
-        speedTitle.setForeground(ModernColors.getTextHint());
-        panel.add(speedTitle);
-
-        speedLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, +1));
-        speedLabel.setForeground(ModernColors.getTextPrimary());  // 主题适配的主文本色
+        speedLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, 1));
         speedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        panel.add(speedLabel);
 
+        panel.add(sizeTitle);
+        panel.add(sizeLabel);
+        panel.add(speedTitle);
+        panel.add(speedLabel);
         return panel;
+    }
+
+    private JLabel makeHintLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
+        label.setForeground(ModernColors.getTextHint());
+        return label;
     }
 
     private JButton createCancelButton() {
         JButton button = new JButton(I18nUtil.getMessage(MessageKeys.UPDATE_CANCEL_DOWNLOAD));
-        button.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, +1));
-        button.setForeground(ModernColors.getTextSecondary());
-        button.setBackground(ModernColors.getCardBackgroundColor());  // 主题适配的卡片背景色
-        button.setBorderPainted(false);
+        button.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, 1));
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBorder(new EmptyBorder(8, 24, 8, 24));
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(ModernColors.getHoverBackgroundColor());  // 主题适配的悬停背景色
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(ModernColors.getCardBackgroundColor());  // 主题适配的卡片背景色
-            }
-        });
-
+        // toolBarButton 自动处理 hover/press，不需要手写 MouseAdapter
+        button.putClientProperty(FlatClientProperties.BUTTON_TYPE,
+                FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         button.addActionListener(e -> {
-            if (onCancelListener != null) {
-                onCancelListener.run();
-            }
+            if (onCancelListener != null) onCancelListener.run();
         });
-
         return button;
     }
 
@@ -167,41 +147,26 @@ public class ModernProgressDialog {
             progressBar.setValue(percentage);
             percentLabel.setText(percentage + "%");
             statusLabel.setText(I18nUtil.getMessage(MessageKeys.UPDATE_DOWNLOADING));
-
-            // 更新大小
-            String downloadedStr = formatBytes(downloaded);
-            String totalStr = formatBytes(total);
-            sizeLabel.setText(String.format("%s / %s", downloadedStr, totalStr));
-
-            // 更新速度
-            String speedStr = formatSpeed(speed);
-            speedLabel.setText(speedStr);
+            sizeLabel.setText(formatBytes(downloaded) + " / " + formatBytes(total));
+            speedLabel.setText(formatSpeed(speed));
         });
     }
 
     private String formatBytes(long bytes) {
-        if (bytes >= 1024 * 1024 * 1024) {
-            return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
-        } else if (bytes >= 1024 * 1024) {
-            return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
-        } else if (bytes >= 1024) {
-            return String.format("%.1f KB", bytes / 1024.0);
-        }
+        if (bytes >= GB) return String.format("%.2f GB", (double) bytes / GB);
+        if (bytes >= MB) return String.format("%.1f MB", (double) bytes / MB);
+        if (bytes >= KB) return String.format("%.1f KB", (double) bytes / KB);
         return bytes + " B";
     }
 
     private String formatSpeed(double speed) {
-        if (speed >= 1024 * 1024) {
-            return String.format("%.2f MB/s", speed / (1024.0 * 1024.0));
-        } else if (speed >= 1024) {
-            return String.format("%.1f KB/s", speed / 1024.0);
-        }
+        if (speed >= MB) return String.format("%.2f MB/s", speed / MB);
+        if (speed >= KB) return String.format("%.1f KB/s", speed / KB);
         return String.format("%.0f B/s", speed);
     }
 
     public void show() {
         SwingUtilities.invokeLater(() -> {
-            // 重置状态
             progressBar.setValue(0);
             percentLabel.setText("0%");
             statusLabel.setText(I18nUtil.getMessage(MessageKeys.UPDATE_CONNECTING));
@@ -218,4 +183,3 @@ public class ModernProgressDialog {
         });
     }
 }
-

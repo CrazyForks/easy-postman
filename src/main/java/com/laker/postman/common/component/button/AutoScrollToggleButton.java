@@ -1,5 +1,6 @@
 package com.laker.postman.common.component.button;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.util.IconUtil;
 
 import javax.swing.*;
@@ -15,14 +16,13 @@ public class AutoScrollToggleButton extends JToggleButton {
 
     public AutoScrollToggleButton() {
         super();
-        updateIcon(true); // 默认选中状态
         setToolTipText("Auto-scroll to bottom");
         setPreferredSize(new Dimension(28, 28));
-        // 扁平化设计
-        setFocusable(false);// 去掉按钮的焦点边框
-        setBorderPainted(false); // 不绘制边框
+        setFocusable(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         setSelected(true); // 默认启用自动滚动
+        updateIcon(true);
 
         // 添加状态改变监听器，动态更新图标颜色
         addItemListener(e -> updateIcon(isSelected()));

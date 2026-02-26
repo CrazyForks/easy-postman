@@ -1,5 +1,6 @@
 package com.laker.postman.common.component.button;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.util.IconUtil;
 
 import javax.swing.*;
@@ -14,13 +15,12 @@ public class WrapToggleButton extends JToggleButton {
     private static final String ICON_PATH = "icons/wrap.svg";
 
     public WrapToggleButton() {
-        updateIcon(false);
         setToolTipText("Toggle Line Wrap");
-        // 扁平化设计
-        setFocusable(false);// 去掉按钮的焦点边框
-        setBorderPainted(false); // 不绘制边框
+        setFocusable(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        setSelected(false); // 默认不启用换行
+        putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+        setSelected(false);
+        updateIcon(false);
 
         // 添加状态改变监听器，动态更新图标颜色
         addItemListener(e -> updateIcon(isSelected()));

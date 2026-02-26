@@ -1,5 +1,6 @@
 package com.laker.postman.panel.update;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.model.UpdateInfo;
 import com.laker.postman.util.FontsUtil;
@@ -256,28 +257,22 @@ public class AutoUpdateNotification {
     private JButton createCloseButton() {
         JButton button = new JButton("×");
         button.setFont(new Font("Arial", Font.PLAIN, 20));
-        button.setContentAreaFilled(false);
-        button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setPreferredSize(new Dimension(24, 24));
         button.setMaximumSize(new Dimension(24, 24));
+        button.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         button.addActionListener(e -> fadeOut());
         return button;
     }
 
-    /**
-     * 创建查看详情按钮
-     */
     private JButton createViewDetailsButton(UpdateInfo updateInfo, Consumer<UpdateInfo> onViewDetails) {
         JButton button = new JButton(I18nUtil.getMessage(MessageKeys.UPDATE_VIEW_DETAILS));
-        button.setContentAreaFilled(false);
-        button.setBorderPainted(false);
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         button.addActionListener(e -> {
             fadeOut();
-            // 延迟调用，等待淡出动画完成
             Timer delayTimer = new Timer(FADE_DURATION, evt -> onViewDetails.accept(updateInfo));
             delayTimer.setRepeats(false);
             delayTimer.start();

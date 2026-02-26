@@ -9,6 +9,7 @@ import com.laker.postman.model.RequestItemProtocolEnum;
 import com.laker.postman.panel.collections.left.RequestCollectionsLeftPanel;
 import com.laker.postman.panel.collections.right.RequestEditPanel;
 import com.laker.postman.panel.collections.right.request.RequestEditSubPanel;
+import com.laker.postman.service.setting.ShortcutManager;
 import com.laker.postman.util.FontsUtil;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.MessageKeys;
@@ -243,7 +244,18 @@ public class ClosableTabComponent extends JPanel {
         JPopupMenu menu = new JPopupMenu();
         JMenuItem closeCurrent = new JMenuItem(I18nUtil.getMessage(MessageKeys.TAB_CLOSE_CURRENT));
         JMenuItem closeOthers = new JMenuItem(I18nUtil.getMessage(MessageKeys.TAB_CLOSE_OTHERS));
+        JMenuItem closeRight = new JMenuItem(I18nUtil.getMessage(MessageKeys.TAB_CLOSE_RIGHT));
         JMenuItem closeAll = new JMenuItem(I18nUtil.getMessage(MessageKeys.TAB_CLOSE_ALL));
+
+        // 从 ShortcutManager 读取当前快捷键并显示在菜单项右侧（同 IDEA 风格）
+        KeyStroke ksClose = ShortcutManager.getKeyStroke(ShortcutManager.CLOSE_CURRENT_TAB);
+        if (ksClose != null) closeCurrent.setAccelerator(ksClose);
+
+        KeyStroke ksOthers = ShortcutManager.getKeyStroke(ShortcutManager.CLOSE_OTHER_TABS);
+        if (ksOthers != null) closeOthers.setAccelerator(ksOthers);
+
+        KeyStroke ksAll = ShortcutManager.getKeyStroke(ShortcutManager.CLOSE_ALL_TABS);
+        if (ksAll != null) closeAll.setAccelerator(ksAll);
 
         RequestEditPanel editPanel = SingletonFactory.getInstance(RequestEditPanel.class);
 
@@ -251,7 +263,7 @@ public class ClosableTabComponent extends JPanel {
         closeCurrent.addActionListener(e -> {
             int idx = tabbedPane.indexOfTabComponent(this);
             if (idx >= 0) {
-                tabbedPane.setSelectedIndex(idx); // 先选中
+                tabbedPane.setSelectedIndex(idx);
                 editPanel.closeCurrentTab();
             }
         });
@@ -260,8 +272,21 @@ public class ClosableTabComponent extends JPanel {
         closeOthers.addActionListener(e -> {
             int idx = tabbedPane.indexOfTabComponent(this);
             if (idx >= 0) {
-                tabbedPane.setSelectedIndex(idx); // 先选中
+                tabbedPane.setSelectedIndex(idx);
                 editPanel.closeOtherTabs();
+            }
+        });
+
+        // 关闭右侧所有标签
+        closeRight.addActionListener(e -> {
+            int thisIdx = tabbedPane.indexOfTabComponent(this);
+            if (thisIdx < 0) return;
+            // 从后往前移除，避免索引漂移
+            for (int i = tabbedPane.getTabCount() - 1; i > thisIdx; i--) {
+                Component comp = tabbedPane.getComponentAt(i);
+                // 跳过 + Tab
+                if (comp instanceof PlusPanel) continue;
+                tabbedPane.remove(i);
             }
         });
 
@@ -269,7 +294,10 @@ public class ClosableTabComponent extends JPanel {
         closeAll.addActionListener(e -> editPanel.closeAllTabs());
 
         menu.add(closeCurrent);
+        menu.addSeparator();
         menu.add(closeOthers);
+        menu.add(closeRight);
+        menu.addSeparator();
         menu.add(closeAll);
         return menu;
     }

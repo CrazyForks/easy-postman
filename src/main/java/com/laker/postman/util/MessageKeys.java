@@ -214,6 +214,7 @@ public final class MessageKeys {
     public static final String TAB_RESPONSE_BODY = "tab.response_body";
     public static final String TAB_CLOSE_OTHERS = "tab.close_others";
     public static final String TAB_CLOSE_ALL = "tab.close_all";
+    public static final String TAB_CLOSE_RIGHT = "tab.close_right";
     public static final String TAB_UNSAVED_CHANGES_SAVE_CURRENT = "tab.unsaved_changes.save_current";
     public static final String TAB_UNSAVED_CHANGES_SAVE_OTHERS = "tab.unsaved_changes.save_others";
     public static final String TAB_UNSAVED_CHANGES_SAVE_ALL = "tab.unsaved_changes.save_all";

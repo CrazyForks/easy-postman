@@ -1416,7 +1416,7 @@ public class RequestEditSubPanel extends JPanel {
         }
         responsePanel.setStatus(resp.code);
         responsePanel.setResponseTime(resp.costMs);
-        responsePanel.setResponseSize(resp.bodySize, resp.httpEventInfo);
+        responsePanel.setResponseSize(resp.bodySize, resp);
     }
 
     private void setTestResults(List<TestResult> testResults) {

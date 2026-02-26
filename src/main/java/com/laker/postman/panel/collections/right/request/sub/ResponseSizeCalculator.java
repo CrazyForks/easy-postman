@@ -25,12 +25,18 @@ public class ResponseSizeCalculator {
         private final boolean compressed;
         private final double compressionRatio;
         private final long savedBytes;
+        /**
+         * 实际压缩算法，如 gzip / br / zstd / deflate，未知时为 "compressed"
+         */
+        private final String encoding;
     }
 
     /**
      * 计算响应大小信息
+     *
+     * @param encoding Content-Encoding 头的值，如 "gzip" / "br" / "zstd"，可为 null
      */
-    public static SizeInfo calculate(long uncompressedBytes, HttpEventInfo httpEventInfo) {
+    public static SizeInfo calculate(long uncompressedBytes, HttpEventInfo httpEventInfo, String encoding) {
         // 检查响应是否被压缩
         // uncompressedBytes = 解压后的响应体大小（从 body.bytes() 获取，OkHttp 自动解压）
         // bodyBytesReceived = 网络层实际接收的字节数（从 OkHttp 事件监听器获取）
@@ -55,18 +61,21 @@ public class ResponseSizeCalculator {
         Color normalColor;
         Color hoverColor;
 
+        String enc = (encoding != null && !encoding.isBlank()) ? encoding.toLowerCase() : "compressed";
+
         if (isCompressed) {
-            displayText = String.format("%s (%.0f%%)",
-                    formatBytes(httpEventInfo.getBodyBytesReceived()), compressionRatio);
+            displayText = String.format("%s (%s %.0f%%)",
+                    formatBytes(httpEventInfo.getBodyBytesReceived()), enc, compressionRatio);
             normalColor = ModernColors.SUCCESS;
             hoverColor = ModernColors.SUCCESS_DARK;
         } else {
             displayText = formatBytes(uncompressedBytes);
             normalColor = ModernColors.getTextHint();
             hoverColor = ModernColors.PRIMARY;
+            enc = null;
         }
 
-        return new SizeInfo(displayText, normalColor, hoverColor, isCompressed, compressionRatio, savedBytes);
+        return new SizeInfo(displayText, normalColor, hoverColor, isCompressed, compressionRatio, savedBytes, enc);
     }
 
     /**

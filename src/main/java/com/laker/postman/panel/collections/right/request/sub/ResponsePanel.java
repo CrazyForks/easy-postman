@@ -8,6 +8,7 @@ import com.laker.postman.model.HttpResponse;
 import com.laker.postman.model.PreparedRequest;
 import com.laker.postman.model.RequestItemProtocolEnum;
 import com.laker.postman.model.script.TestResult;
+import com.laker.postman.service.http.EasyHttpHeaders;
 import com.laker.postman.service.http.HttpUtil;
 import com.laker.postman.service.render.HttpHtmlRenderer;
 import com.laker.postman.service.setting.SettingManager;
@@ -18,9 +19,6 @@ import com.laker.postman.util.TimeDisplayUtil;
 import lombok.Getter;
 
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -524,17 +522,19 @@ public class ResponsePanel extends JPanel {
     }
 
     /**
-     * 设置响应大小显示
-     * 重构后使用Helper类简化代码逻辑
+     * 设置响应大小显示（带完整响应对象，可读取 Content-Encoding）
      */
-    public void setResponseSize(long bytes, HttpEventInfo httpEventInfo) {
-        // 使用Helper类计算大小信息
-        ResponseSizeCalculator.SizeInfo sizeInfo = ResponseSizeCalculator.calculate(bytes, httpEventInfo);
-
-        // 更新标签显示
+    public void setResponseSize(long bytes, HttpResponse httpResponse) {
+        String encoding = null;
+        HttpEventInfo httpEventInfo = httpResponse != null ? httpResponse.httpEventInfo : null;
+        if (httpResponse != null && httpResponse.headers != null) {
+            List<String> enc = httpResponse.headers.get(EasyHttpHeaders.CONTENT_ENCODING);
+            if (enc != null && !enc.isEmpty()) {
+                encoding = enc.get(0);
+            }
+        }
+        ResponseSizeCalculator.SizeInfo sizeInfo = ResponseSizeCalculator.calculate(bytes, httpEventInfo, encoding);
         updateSizeLabel(sizeInfo);
-
-        // 添加tooltip（如果有httpEventInfo）
         if (httpEventInfo != null) {
             attachSizeTooltip(bytes, httpEventInfo, sizeInfo);
         }
@@ -559,37 +559,26 @@ public class ResponsePanel extends JPanel {
      * 添加响应大小的tooltip和鼠标悬停效果
      */
     private void attachSizeTooltip(long bytes, HttpEventInfo httpEventInfo, ResponseSizeCalculator.SizeInfo sizeInfo) {
-        // 使用Helper类生成tooltip HTML
-        String tooltip = ResponseTooltipBuilder.buildSizeTooltip(bytes, httpEventInfo, sizeInfo);
-
-        // 添加鼠标监听器实现悬停效果
         responseSizeLabel.addMouseListener(new MouseAdapter() {
             private Timer showTimer;
             private Timer hideTimer;
 
             @Override
             public void mouseEntered(MouseEvent e) {
-                // 悬停时改变颜色
                 responseSizeLabel.setForeground(sizeInfo.getHoverColor());
-
-                if (hideTimer != null) {
-                    hideTimer.stop();
-                }
-
-                showTimer = new Timer(400, evt -> EasyPostmanStyleTooltip.showTooltip(responseSizeLabel, tooltip));
+                if (hideTimer != null) hideTimer.stop();
+                showTimer = new Timer(350, evt -> {
+                    JPanel panel = ResponseTooltipBuilder.buildSizeTooltipPanel(bytes, httpEventInfo, sizeInfo);
+                    EasyPostmanStyleTooltip.showTooltip(responseSizeLabel, panel);
+                });
                 showTimer.setRepeats(false);
                 showTimer.start();
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                // 恢复原色
                 responseSizeLabel.setForeground(sizeInfo.getNormalColor());
-
-                if (showTimer != null) {
-                    showTimer.stop();
-                }
-
+                if (showTimer != null) showTimer.stop();
                 hideTimer = new Timer(200, evt -> EasyPostmanStyleTooltip.hideTooltip());
                 hideTimer.setRepeats(false);
                 hideTimer.start();
@@ -696,7 +685,7 @@ public class ResponsePanel extends JPanel {
         }
     }
 
-    // Enhanced tooltip component matching EasyPostman styling
+    // ── Swing 原生 Tooltip 窗口 ────────────────────────────────────────
     private static class EasyPostmanStyleTooltip extends JWindow {
         private static EasyPostmanStyleTooltip instance;
         private static Timer autoHideTimer;
@@ -707,113 +696,87 @@ public class ResponsePanel extends JPanel {
             setType(Window.Type.POPUP);
         }
 
-        public static void showTooltip(Component parent, String html) {
+        /**
+         * 显示 Swing Panel 内容的 Tooltip
+         */
+        public static void showTooltip(Component anchor, JPanel content) {
             hideTooltip();
 
-            Window parentWindow = SwingUtilities.getWindowAncestor(parent);
+            Window parentWindow = SwingUtilities.getWindowAncestor(anchor);
             instance = new EasyPostmanStyleTooltip(parentWindow);
 
-            JLabel content = new JLabel(html);
-            content.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
-            content.setOpaque(true);
-            // 使用 ModernColors 主题自适应背景色和边框色
-            content.setBackground(ModernColors.getCardBackgroundColor()); // 卡片背景色
-            content.setForeground(ModernColors.getTextPrimary()); // 主要文本颜色
-            content.setBorder(new CompoundBorder(
-                    new LineBorder(ModernColors.getBorderMediumColor(), 1), // 主题适配边框
-                    new EmptyBorder(6, 8, 6, 8) // 减少内边距
-            ));
+            // 外层加边框，设置最小宽度 220px
+            JPanel wrapper = new JPanel(new BorderLayout()) {
+                @Override
+                public Dimension getPreferredSize() {
+                    Dimension d = super.getPreferredSize();
+                    d.width = Math.max(220, d.width);
+                    return d;
+                }
+            };
+            wrapper.setBackground(ModernColors.getCardBackgroundColor());
+            wrapper.setBorder(BorderFactory.createLineBorder(ModernColors.getBorderMediumColor(), 1));
+            wrapper.add(content, BorderLayout.CENTER);
 
-            instance.add(content);
+            instance.setContentPane(wrapper);
             instance.pack();
 
-            // Smart positioning - above the component, centered
-            Point screenLocation = parent.getLocationOnScreen();
-            int tooltipWidth = instance.getWidth();
-            int tooltipHeight = instance.getHeight();
+            // 定位：anchor 正上方居中，屏幕边界修正
+            Point loc = anchor.getLocationOnScreen();
+            int tw = instance.getWidth(), th = instance.getHeight();
+            int x = loc.x + (anchor.getWidth() - tw) / 2;
+            int y = loc.y - th - 6;
 
-            // Center horizontally on the component
-            int x = screenLocation.x + (parent.getWidth() - tooltipWidth) / 2;
-            int y = screenLocation.y - tooltipHeight - 6; // 6px gap above
-
-            // Screen bounds checking
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(
-                    GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration()
-            );
-
-            int screenWidth = screenSize.width - screenInsets.right;
-
-            // Adjust horizontal position if needed
-            if (x + tooltipWidth > screenWidth) {
-                x = screenWidth - tooltipWidth - 10;
-            }
-            if (x < screenInsets.left) {
-                x = screenInsets.left + 10;
-            }
-
-            // If tooltip doesn't fit above, show below
-            if (y < screenInsets.top) {
-                y = screenLocation.y + parent.getHeight() + 6;
-            }
+            Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+            Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(
+                    GraphicsEnvironment.getLocalGraphicsEnvironment()
+                            .getDefaultScreenDevice().getDefaultConfiguration());
+            x = Math.max(insets.left + 4, Math.min(x, screen.width - insets.right - tw - 4));
+            if (y < insets.top) y = loc.y + anchor.getHeight() + 6;
 
             instance.setLocation(x, y);
-
-            // Subtle appearance with soft shadow effect
-            instance.setOpacity(0.0f);
+            instance.setOpacity(0f);
             instance.setVisible(true);
 
-            // Gentle fade-in animation with null check
-            Timer fadeIn = new Timer(30, null);
+            // 淡入
+            Timer fadeIn = new Timer(20, null);
             fadeIn.addActionListener(e -> {
-                if (instance != null) { // 添加null检查
-                    float opacity = instance.getOpacity() + 0.08f;
-                    if (opacity >= 0.96f) {
-                        instance.setOpacity(0.96f); // Slightly transparent for elegance
-                        fadeIn.stop();
-                    } else {
-                        instance.setOpacity(opacity);
-                    }
-                } else {
-                    fadeIn.stop(); // 如果instance为null，停止动画
+                if (instance == null) {
+                    ((Timer) e.getSource()).stop();
+                    return;
                 }
+                float op = Math.min(1f, instance.getOpacity() + 0.1f);
+                instance.setOpacity(op);
+                if (op >= 1f) ((Timer) e.getSource()).stop();
             });
             fadeIn.start();
 
-            // Auto-hide after 10 seconds (balanced timing)
-            if (autoHideTimer != null) {
-                autoHideTimer.stop();
-            }
+            // 10s 后自动隐藏
+            if (autoHideTimer != null) autoHideTimer.stop();
             autoHideTimer = new Timer(10000, e -> hideTooltip());
             autoHideTimer.setRepeats(false);
             autoHideTimer.start();
         }
 
         public static void hideTooltip() {
-            if (instance != null) {
-                // Gentle fade-out animation with null check
-                Timer fadeOut = new Timer(30, null);
-                fadeOut.addActionListener(e -> {
-                    if (instance != null) { // 添加null检查
-                        float opacity = instance.getOpacity() - 0.12f;
-                        if (opacity <= 0.0f) {
-                            instance.setVisible(false);
-                            instance.dispose();
-                            instance = null;
-                            fadeOut.stop();
-                        } else {
-                            instance.setOpacity(opacity);
-                        }
-                    } else {
-                        fadeOut.stop(); // 如果instance为null，停止动画
-                    }
-                });
-                fadeOut.start();
-            }
             if (autoHideTimer != null) {
                 autoHideTimer.stop();
                 autoHideTimer = null;
             }
+            if (instance == null) return;
+            final EasyPostmanStyleTooltip target = instance;
+            instance = null;
+            Timer fadeOut = new Timer(20, null);
+            fadeOut.addActionListener(e -> {
+                float op = Math.max(0f, target.getOpacity() - 0.12f);
+                target.setOpacity(op);
+                if (op <= 0f) {
+                    ((Timer) e.getSource()).stop();
+                    target.setVisible(false);
+                    target.dispose();
+                }
+            });
+            fadeOut.start();
         }
     }
 

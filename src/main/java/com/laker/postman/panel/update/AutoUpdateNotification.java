@@ -11,6 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.function.Consumer;
 
 /**
@@ -20,257 +24,266 @@ import java.util.function.Consumer;
 public class AutoUpdateNotification {
 
     private static final int NOTIFICATION_WIDTH = 400;
-    private static final int NOTIFICATION_HEIGHT = 140;
     private static final int MARGIN = 20;
-    private static final int FADE_DURATION = 300; // 毫秒
-    private static final int DISPLAY_DURATION = 5000; // 毫秒
-    private static final float FADE_STEP = 0.05f; // 淡入淡出步长
-    private static final int FADE_TIMER_DELAY = 10; // 淡入淡出定时器延迟（毫秒）
+    private static final int FADE_DURATION = 300;
+    private static final int DISPLAY_DURATION = 6000;
+    private static final float FADE_STEP = 0.05f;
+    private static final int FADE_TIMER_DELAY = 10;
+    private static final int INDICATOR_WIDTH = 4;
+    /** 底部预留空间（避免遮住状态栏/Dock） */
+    private static final int BOTTOM_CLEARANCE = 40;
+
     private final JDialog dialog;
+    private final JFrame parent;
     private Timer fadeTimer;
     private Timer autoCloseTimer;
-    private float opacity = 0f; // 由于所有操作都在 EDT 线程，不需要 volatile
+    private float opacity = 0f;
+    // 跟随父窗口移动的监听器，便于销毁时移除
+    private ComponentAdapter parentMoveListener;
+    // hover 高亮层透明度（0=无高亮，30=高亮）
+    private int hoverAlpha = 0;
 
     private AutoUpdateNotification(JFrame parent, UpdateInfo updateInfo, Consumer<UpdateInfo> onViewDetails) {
-        // 创建非模态、无装饰的对话框
+        this.parent = parent;
         dialog = new JDialog(parent, false);
         dialog.setUndecorated(true);
         dialog.setFocusableWindowState(false);
         dialog.setType(Window.Type.UTILITY);
-        dialog.setSize(NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT);
-
-        // 初始透明度
         dialog.setOpacity(0f);
 
-        // 创建通知内容
         JPanel contentPanel = createNotificationPanel(updateInfo, onViewDetails);
         dialog.setContentPane(contentPanel);
+        // 高度自适应内容
+        dialog.pack();
+        dialog.setSize(NOTIFICATION_WIDTH, dialog.getHeight());
 
-        // 定位到父窗口右下角
-        positionDialog(parent);
+        positionDialog();
+        registerParentMoveListener();
     }
 
-    /**
-     * 显示更新通知
-     */
     public static void show(JFrame parent, UpdateInfo updateInfo, Consumer<UpdateInfo> onViewDetails) {
         SwingUtilities.invokeLater(() -> {
-            // 只在父窗口可见且获得焦点时显示
             if (parent == null || !parent.isVisible()) {
                 log.debug("Parent window is not visible, skip showing notification");
                 return;
             }
-
             if (!parent.isFocused() && !parent.isActive()) {
                 log.debug("Parent window is not active, skip showing notification");
                 return;
             }
-
             AutoUpdateNotification notification = new AutoUpdateNotification(parent, updateInfo, onViewDetails);
             notification.display();
         });
     }
 
-    /**
-     * 显示通知（带淡入淡出动画）
-     */
     private void display() {
         dialog.setVisible(true);
-
-        // 淡入动画
         fadeIn();
+        scheduleAutoClose();
+    }
 
-        // 自动关闭定时器
+    /** 启动自动关闭倒计时 */
+    private void scheduleAutoClose() {
+        stopAutoCloseTimer();
         autoCloseTimer = new Timer(DISPLAY_DURATION, e -> fadeOut());
         autoCloseTimer.setRepeats(false);
         autoCloseTimer.start();
     }
 
-    /**
-     * 淡入动画
-     */
     private void fadeIn() {
-        stopFadeTimer(); // 停止之前的淡入淡出定时器
-
+        stopFadeTimer();
         fadeTimer = new Timer(FADE_TIMER_DELAY, null);
         fadeTimer.addActionListener(e -> {
-            opacity += FADE_STEP;
-            if (opacity >= 1.0f) {
-                opacity = 1.0f;
-                stopFadeTimer();
-            }
+            opacity = Math.min(opacity + FADE_STEP, 1.0f);
             dialog.setOpacity(opacity);
+            if (opacity >= 1.0f) stopFadeTimer();
         });
         fadeTimer.start();
     }
 
-    /**
-     * 淡出动画
-     */
     private void fadeOut() {
-        stopFadeTimer(); // 停止之前的淡入淡出定时器
-        stopAutoCloseTimer(); // 停止自动关闭定时器
-
+        stopFadeTimer();
+        stopAutoCloseTimer();
         fadeTimer = new Timer(FADE_TIMER_DELAY, null);
         fadeTimer.addActionListener(e -> {
-            opacity -= FADE_STEP;
+            opacity = Math.max(opacity - FADE_STEP, 0f);
+            dialog.setOpacity(opacity);
             if (opacity <= 0f) {
-                opacity = 0f;
                 stopFadeTimer();
                 cleanupAndClose();
             }
-            dialog.setOpacity(opacity);
         });
         fadeTimer.start();
     }
 
-    /**
-     * 停止淡入淡出定时器
-     */
     private void stopFadeTimer() {
-        if (fadeTimer != null) {
-            fadeTimer.stop();
-            fadeTimer = null;
-        }
+        if (fadeTimer != null) { fadeTimer.stop(); fadeTimer = null; }
     }
 
-    /**
-     * 停止自动关闭定时器
-     */
     private void stopAutoCloseTimer() {
-        if (autoCloseTimer != null) {
-            autoCloseTimer.stop();
-            autoCloseTimer = null;
-        }
+        if (autoCloseTimer != null) { autoCloseTimer.stop(); autoCloseTimer = null; }
     }
 
-    /**
-     * 清理资源并关闭对话框
-     */
     private void cleanupAndClose() {
         stopFadeTimer();
         stopAutoCloseTimer();
-        if (dialog != null) {
-            dialog.dispose();
+        // 移除父窗口移动监听器，防止内存泄漏
+        if (parentMoveListener != null) {
+            parent.removeComponentListener(parentMoveListener);
+            parentMoveListener = null;
         }
+        dialog.dispose();
     }
 
-    /**
-     * 定位对话框到父窗口右下角
-     */
-    private void positionDialog(JFrame parent) {
-        Rectangle parentBounds = parent.getBounds();
+    /** 跟随父窗口移动/缩放重新定位 */
+    private void registerParentMoveListener() {
+        parentMoveListener = new ComponentAdapter() {
+            @Override public void componentMoved(ComponentEvent e)  { positionDialog(); }
+            @Override public void componentResized(ComponentEvent e) { positionDialog(); }
+        };
+        parent.addComponentListener(parentMoveListener);
+    }
 
-        int x = parentBounds.x + parentBounds.width - NOTIFICATION_WIDTH - MARGIN;
-        int y = parentBounds.y + parentBounds.height - NOTIFICATION_HEIGHT - MARGIN - 40; // 留出底部空间
+    private void positionDialog() {
+        Rectangle pb = parent.getBounds();
+        int x = pb.x + pb.width  - NOTIFICATION_WIDTH  - MARGIN;
+        int y = pb.y + pb.height - dialog.getHeight() - MARGIN - BOTTOM_CLEARANCE;
 
-        // 确保不超出屏幕边界
         GraphicsConfiguration gc = parent.getGraphicsConfiguration();
         if (gc != null) {
-            Rectangle screenBounds = gc.getBounds();
-            Insets screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
-
-            int maxX = screenBounds.x + screenBounds.width - screenInsets.right - NOTIFICATION_WIDTH - MARGIN;
-            int maxY = screenBounds.y + screenBounds.height - screenInsets.bottom - NOTIFICATION_HEIGHT - MARGIN;
-
-            x = Math.min(x, maxX);
-            y = Math.min(y, maxY);
-            x = Math.max(screenBounds.x + screenInsets.left + MARGIN, x);
-            y = Math.max(screenBounds.y + screenInsets.top + MARGIN, y);
+            Rectangle screen = gc.getBounds();
+            Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(gc);
+            x = Math.min(x, screen.x + screen.width  - insets.right  - NOTIFICATION_WIDTH  - MARGIN);
+            y = Math.min(y, screen.y + screen.height - insets.bottom - dialog.getHeight() - MARGIN);
+            x = Math.max(x, screen.x + insets.left + MARGIN);
+            y = Math.max(y, screen.y + insets.top  + MARGIN);
         }
-
         dialog.setLocation(x, y);
     }
 
-    /**
-     * 创建通知面板
-     */
     private JPanel createNotificationPanel(UpdateInfo updateInfo, Consumer<UpdateInfo> onViewDetails) {
-        JPanel panel = new JPanel(new BorderLayout(12, 8));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ModernColors.getBorderLightColor(), 1),
-                BorderFactory.createEmptyBorder(16, 16, 16, 16)
-        ));
+        // 外层：左侧彩色指示条 + 半透明 hover 背景（需 setOpaque(false) 才能画 alpha）
+        JPanel root = new JPanel(new BorderLayout()) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                // 正常背景（跟随主题）
+                g2.setColor(UIManager.getColor("Panel.background"));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                // hover 高亮层（由 hoverAlpha 控制，0 = 无）
+                if (hoverAlpha > 0) {
+                    Color sel = UIManager.getColor("List.selectionBackground");
+                    if (sel != null) {
+                        g2.setColor(new Color(sel.getRed(), sel.getGreen(), sel.getBlue(), hoverAlpha));
+                        g2.fillRect(0, 0, getWidth(), getHeight());
+                    }
+                }
+                // 左侧彩色指示条（实时取主题色）
+                g2.setColor(ModernColors.INFO);
+                g2.fillRect(0, 0, INDICATOR_WIDTH, getHeight());
+                // 外边框（实时取主题色）
+                g2.setColor(ModernColors.getBorderLightColor());
+                g2.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
+                g2.dispose();
+            }
+        };
+        // setOpaque(false) 使自定义 paintComponent 完全接管背景绘制
+        root.setOpaque(false);
+        root.setBorder(BorderFactory.createEmptyBorder(14, 14 + INDICATOR_WIDTH, 14, 14));
+
+        // 鼠标悬停：暂停倒计时 + 高亮背景
+        // 用 hoverAlpha 字段控制透明度，通过 repaint 触发，避免直接 setBackground
+        root.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) {
+                stopAutoCloseTimer();
+                hoverAlpha = 30;
+                root.repaint();
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                // 判断鼠标是否真的离开了 root（移到子组件时也会触发 mouseExited，需过滤）
+                Component dest = SwingUtilities.getDeepestComponentAt(
+                        root, e.getX(), e.getY());
+                if (dest != null && SwingUtilities.isDescendingFrom(dest, root)) return;
+                hoverAlpha = 0;
+                root.repaint();
+                scheduleAutoClose();
+            }
+        });
 
         // 左侧图标
-        JLabel iconLabel = new JLabel(IconUtil.createThemed("icons/info.svg", 36, 36));
+        JLabel iconLabel = new JLabel(IconUtil.createThemed("icons/info.svg", 32, 32));
         iconLabel.setVerticalAlignment(SwingConstants.TOP);
-        panel.add(iconLabel, BorderLayout.WEST);
+        iconLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
+        root.add(iconLabel, BorderLayout.WEST);
 
         // 中心内容
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         contentPanel.setOpaque(false);
 
-        // 标题
         JLabel titleLabel = new JLabel(I18nUtil.getMessage(MessageKeys.UPDATE_NEW_VERSION_AVAILABLE));
         titleLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.BOLD, 1));
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // 版本信息
-        String versionText = String.format("%s → %s",
-                updateInfo.getCurrentVersion(),
-                updateInfo.getLatestVersion());
+        String versionText = updateInfo.getCurrentVersion() + "  →  " + updateInfo.getLatestVersion();
         JLabel versionLabel = new JLabel(versionText);
         versionLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        versionLabel.setForeground(ModernColors.getTextSecondary());
         versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // 描述
         String description = extractDescription(updateInfo);
-        JLabel descLabel = new JLabel("<html><body style='width: 240px'>" + description + "</body></html>");
+        JLabel descLabel = new JLabel("<html><body style='width:220px'>" + description + "</body></html>");
         descLabel.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -2));
+        descLabel.setForeground(ModernColors.getTextHint());
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        // 底部「查看详情」链接按钮（同 IDEA 通知底部操作区风格）
+        JButton viewButton = createViewDetailsButton(updateInfo, onViewDetails);
+        viewButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         contentPanel.add(titleLabel);
-        contentPanel.add(Box.createVerticalStrut(4));
+        contentPanel.add(Box.createVerticalStrut(3));
         contentPanel.add(versionLabel);
         contentPanel.add(Box.createVerticalStrut(6));
         contentPanel.add(descLabel);
+        contentPanel.add(Box.createVerticalStrut(8));
+        contentPanel.add(viewButton);
 
-        panel.add(contentPanel, BorderLayout.CENTER);
+        root.add(contentPanel, BorderLayout.CENTER);
 
-        // 右侧按钮区域
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
-        buttonPanel.setOpaque(false);
-
-        // 关闭按钮
+        // 右上角关闭按钮
         JButton closeButton = createCloseButton();
-        closeButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        JPanel topRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        topRight.setOpaque(false);
+        topRight.add(closeButton);
+        root.add(topRight, BorderLayout.EAST);
 
-        // 查看详情按钮
-        JButton viewButton = createViewDetailsButton(updateInfo, onViewDetails);
-        viewButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        buttonPanel.add(closeButton);
-        buttonPanel.add(Box.createVerticalGlue());
-        buttonPanel.add(viewButton);
-
-        panel.add(buttonPanel, BorderLayout.EAST);
-
-        return panel;
+        return root;
     }
 
-    /**
-     * 创建关闭按钮
-     */
     private JButton createCloseButton() {
         JButton button = new JButton("×");
-        button.setFont(new Font("Arial", Font.PLAIN, 20));
+        button.setFont(new Font("Arial", Font.PLAIN, 18));
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setPreferredSize(new Dimension(24, 24));
-        button.setMaximumSize(new Dimension(24, 24));
+        button.setPreferredSize(new Dimension(22, 22));
+        button.setMaximumSize(new Dimension(22, 22));
+        button.setToolTipText(I18nUtil.getMessage(MessageKeys.BUTTON_CLOSE));
         button.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         button.addActionListener(e -> fadeOut());
         return button;
     }
 
     private JButton createViewDetailsButton(UpdateInfo updateInfo, Consumer<UpdateInfo> onViewDetails) {
-        JButton button = new JButton(I18nUtil.getMessage(MessageKeys.UPDATE_VIEW_DETAILS));
+        // 链接风格：无边框、蓝色文字、下划线 HTML，同 IDEA 通知底部 "View" 链接
+        JButton button = new JButton(
+                "<html><u>" + I18nUtil.getMessage(MessageKeys.UPDATE_VIEW_DETAILS) + "</u></html>");
+        button.setForeground(ModernColors.INFO);
         button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+        button.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        button.setMargin(new Insets(0, 0, 0, 0));
         button.addActionListener(e -> {
             fadeOut();
             Timer delayTimer = new Timer(FADE_DURATION, evt -> onViewDetails.accept(updateInfo));
@@ -280,47 +293,34 @@ public class AutoUpdateNotification {
         return button;
     }
 
-
-    /**
-     * 提取更新描述
-     */
     private String extractDescription(UpdateInfo updateInfo) {
         if (updateInfo.getReleaseInfo() == null) {
             return I18nUtil.isChinese() ? "点击查看更新详情" : "Click to view details";
         }
-
         String body = updateInfo.getReleaseInfo().getStr("body", "");
         if (body.isEmpty()) {
             return I18nUtil.isChinese() ? "包含新功能和改进" : "New features and improvements";
         }
-
-        // 清理 Markdown 格式
         String cleaned = body.trim()
                 .replaceAll("^#{1,6}\\s+", "")
                 .replaceAll("\\*\\*(.+?)\\*\\*", "$1")
                 .replaceAll("\\*(.+?)\\*", "$1")
                 .replaceAll("```[\\s\\S]*?```", "")
                 .replaceAll("`(.+?)`", "$1")
-                .replaceAll("\\[(.+?)]\\([^)]+\\)", "$1") // 优化正则表达式
+                .replaceAll("\\[(.+?)]\\([^)]+\\)", "$1")
                 .replaceAll("\\n+", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-
-        // 截取前60个字符
         int maxLength = 60;
         if (cleaned.length() > maxLength) {
             int lastSpace = cleaned.lastIndexOf(' ', maxLength);
-            if (lastSpace > maxLength * 0.7) {
-                cleaned = cleaned.substring(0, lastSpace) + "...";
-            } else {
-                cleaned = cleaned.substring(0, maxLength) + "...";
-            }
+            cleaned = (lastSpace > maxLength * 0.7)
+                    ? cleaned.substring(0, lastSpace) + "..."
+                    : cleaned.substring(0, maxLength) + "...";
         }
-
         if (cleaned.isEmpty()) {
             return I18nUtil.isChinese() ? "包含新功能和改进" : "New features and improvements";
         }
-
         return cleaned;
     }
 }

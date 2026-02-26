@@ -96,15 +96,22 @@ public class ResponsePanel extends JPanel {
             // 初始化第一个可见tab为选中状态
             initializeFirstSelectedTab(tabButtons);
 
-            statusBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 2));
-            // 现代扁平风格：紧凑布局，状态码带彩色背景框
+            statusBar = new JPanel();
+            statusBar.setLayout(new BoxLayout(statusBar, BoxLayout.X_AXIS));
+            statusBar.setOpaque(false);
+            statusBar.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 10));
             statusBar.add(statusCodeLabel);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(separator1);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(responseTimeLabel);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(separator2);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(responseSizeLabel);
 
             topResponseBar = new JPanel(new BorderLayout());
+            topResponseBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ModernColors.getDividerBorderColor()));
             topResponseBar.add(tabBar, BorderLayout.WEST);
             topResponseBar.add(statusBar, BorderLayout.EAST);
             cardPanel = new JPanel(new CardLayout());
@@ -126,14 +133,21 @@ public class ResponsePanel extends JPanel {
             // 初始化第一个可见tab为选中状态
             initializeFirstSelectedTab(tabButtons);
 
-            statusBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 3));
-            // 现代扁平风格：添加适当间距和分隔符
+            statusBar = new JPanel();
+            statusBar.setLayout(new BoxLayout(statusBar, BoxLayout.X_AXIS));
+            statusBar.setOpaque(false);
+            statusBar.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 10));
             statusBar.add(statusCodeLabel);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(separator1);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(responseTimeLabel);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(separator2);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(responseSizeLabel);
             topResponseBar = new JPanel(new BorderLayout());
+            topResponseBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ModernColors.getDividerBorderColor()));
             topResponseBar.add(tabBar, BorderLayout.WEST);
             topResponseBar.add(statusBar, BorderLayout.EAST);
             cardPanel = new JPanel(new CardLayout());
@@ -155,15 +169,22 @@ public class ResponsePanel extends JPanel {
             // 初始化第一个可见tab为选中状态
             initializeFirstSelectedTab(tabButtons);
 
-            statusBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 3));
-            // 现代扁平风格：添加适当间距和分隔符
+            statusBar = new JPanel();
+            statusBar.setLayout(new BoxLayout(statusBar, BoxLayout.X_AXIS));
+            statusBar.setOpaque(false);
+            statusBar.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 10));
             statusBar.add(statusCodeLabel);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(separator1);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(responseTimeLabel);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(separator2);
+            statusBar.add(Box.createHorizontalStrut(6));
             statusBar.add(responseSizeLabel);
 
             topResponseBar = new JPanel(new BorderLayout());
+            topResponseBar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ModernColors.getDividerBorderColor()));
             topResponseBar.add(tabBar, BorderLayout.WEST);
             topResponseBar.add(statusBar, BorderLayout.EAST);
             cardPanel = new JPanel(new CardLayout());
@@ -362,96 +383,69 @@ public class ResponsePanel extends JPanel {
     }
 
     /**
-     * 创建现代化的状态码Label - 带彩色圆角边框背景
+     * 创建状态码标签 —— 胶囊/pill 样式，实色细边框
      */
     private JLabel createModernStatusLabel() {
         JLabel label = new JLabel() {
             @Override
             protected void paintComponent(Graphics g) {
-                if (getText() != null && !getText().isEmpty() && !getText().equals("...")) {
-                    Graphics2D g2d = (Graphics2D) g.create();
-                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                    // 根据状态码确定背景色
-                    Color bgColor = getStatusBackgroundColor(getText());
-                    g2d.setColor(bgColor);
-
-                    // 绘制圆角矩形背景
-                    g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 4, 4);
-                    g2d.dispose();
+                String text = getText();
+                if (text != null && !text.isEmpty()) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    int w = getWidth(), h = getHeight();
+                    Color c = getForeground();
+                    // 极淡填充（5% opacity）
+                    g2.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 22));
+                    g2.fillRoundRect(0, 0, w - 1, h - 1, h, h);
+                    // 1px 实色细边框（同前景色，30% opacity）
+                    g2.setColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), 80));
+                    g2.setStroke(new BasicStroke(1f));
+                    g2.drawRoundRect(0, 0, w - 1, h - 1, h, h);
+                    g2.dispose();
                 }
                 super.paintComponent(g);
             }
-
-            private Color getStatusBackgroundColor(String statusText) {
-                if (statusText.startsWith("2")) {
-                    // 2xx 成功 - 绿色背景
-                    return ModernColors.isDarkTheme()
-                            ? new Color(34, 197, 94, 30)  // 半透明绿色
-                            : new Color(34, 197, 94, 20);
-                } else if (statusText.startsWith("3")) {
-                    // 3xx 重定向 - 蓝色背景
-                    return ModernColors.isDarkTheme()
-                            ? new Color(59, 130, 246, 30)
-                            : new Color(59, 130, 246, 20);
-                } else if (statusText.startsWith("4")) {
-                    // 4xx 客户端错误 - 橙色背景
-                    return ModernColors.isDarkTheme()
-                            ? new Color(245, 158, 11, 30)
-                            : new Color(245, 158, 11, 20);
-                } else if (statusText.startsWith("5")) {
-                    // 5xx 服务器错误 - 红色背景
-                    return ModernColors.isDarkTheme()
-                            ? new Color(239, 68, 68, 30)
-                            : new Color(239, 68, 68, 20);
-                } else {
-                    // 其他状态 - 灰色背景
-                    return ModernColors.isDarkTheme()
-                            ? new Color(100, 116, 139, 30)
-                            : new Color(100, 116, 139, 20);
-                }
-            }
         };
-
         label.setFont(FontsUtil.getDefaultFont(Font.BOLD));
         label.setOpaque(false);
-        // 添加内边距
-        label.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-        label.setToolTipText("Response Status Code");
+        label.setBorder(BorderFactory.createEmptyBorder(1, 8, 1, 8));
+        label.setToolTipText("HTTP Status Code");
         return label;
     }
 
     /**
-     * 创建现代化的响应时间Label - 带时钟图标，紧凑样式
+     * 创建响应时间标签 —— 带时钟图标前缀
      */
     private JLabel createModernTimeLabel() {
         JLabel label = new JLabel();
-        label.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
-        label.setForeground(ModernColors.getTextSecondary());
+        label.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        label.setForeground(ModernColors.getTextHint());
         label.setToolTipText("Response Time");
         return label;
     }
 
     /**
-     * 创建现代化的响应大小Label - 紧凑样式
+     * 创建响应大小标签 —— 带大小图标前缀
      */
     private JLabel createModernSizeLabel() {
         JLabel label = new JLabel();
-        label.setFont(FontsUtil.getDefaultFont(Font.PLAIN));
-        label.setForeground(ModernColors.getTextSecondary());
+        label.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
+        label.setForeground(ModernColors.getTextHint());
         label.setToolTipText("Response Size");
         label.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return label;
     }
 
     /**
-     * 创建状态栏项之间的分隔符 - 竖线样式，更紧凑
+     * 分隔符 —— 细竖线，更轻盈
      */
     private JLabel createSeparator() {
-        JLabel separator = new JLabel("•");
-        separator.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -1));
-        separator.setForeground(ModernColors.getTextPrimary());
-        return separator;
+        JLabel sep = new JLabel("|");
+        sep.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, -2));
+        sep.setForeground(ModernColors.getBorderMediumColor());
+        sep.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 2));
+        return sep;
     }
 
     public void setResponseTabButtonsEnable(boolean enable) {
@@ -524,14 +518,9 @@ public class ResponsePanel extends JPanel {
     }
 
     public void setResponseTime(long ms) {
-        // 现代扁平风格：直接显示时间值，无需 "耗时:" 前缀
         responseTimeLabel.setText(TimeDisplayUtil.formatElapsedTime(ms));
-        // 使用主题适配的次要文本颜色
         responseTimeLabel.setForeground(ModernColors.getTextSecondary());
-
-        // 如果响应时间有效，显示后续的分隔符
-        boolean hasTime = ms >= 0;
-        separator2.setVisible(hasTime);
+        separator2.setVisible(ms >= 0);
     }
 
     /**

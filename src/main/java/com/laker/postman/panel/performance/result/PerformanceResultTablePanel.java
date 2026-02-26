@@ -230,8 +230,11 @@ public class PerformanceResultTablePanel extends JPanel {
         String text = searchField.getText();
         if (text == null || text.trim().isEmpty()) {
             rowSorter.setRowFilter(null);
+            searchField.setNoResult(false);
         } else {
             rowSorter.setRowFilter(new ResultRowFilter(text.trim().toLowerCase()));
+            // 过滤后无可见行时变红
+            searchField.setNoResult(table.getRowCount() == 0);
         }
     }
 

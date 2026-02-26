@@ -1,5 +1,6 @@
 package com.laker.postman.common.component;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.components.FlatTextField;
 import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.util.FontsUtil;
@@ -56,7 +57,8 @@ public class SearchReplacePanel extends JPanel {
 
     /**
      * 创建搜索替换面板
-     * @param textArea 目标文本区域
+     *
+     * @param textArea      目标文本区域
      * @param enableReplace 是否启用替换功能
      */
     public SearchReplacePanel(RSyntaxTextArea textArea, boolean enableReplace) {
@@ -78,28 +80,11 @@ public class SearchReplacePanel extends JPanel {
         toggleReplaceBtn = new JToggleButton(IconUtil.createThemed(ICON_EXPAND, 16, 16));
         toggleReplaceBtn.setToolTipText("Toggle Replace");
         toggleReplaceBtn.setFocusable(false);
-        toggleReplaceBtn.setContentAreaFilled(false);
-        toggleReplaceBtn.setBorderPainted(false);
         toggleReplaceBtn.setPreferredSize(new Dimension(TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE));
         toggleReplaceBtn.setMaximumSize(new Dimension(TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE));
         toggleReplaceBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        toggleReplaceBtn.setVisible(enableReplace);  // 根据参数控制是否显示
-
-        // 添加悬停效果
-        toggleReplaceBtn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                if (!toggleReplaceBtn.isSelected()) {
-                    toggleReplaceBtn.setContentAreaFilled(true);
-                }
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                toggleReplaceBtn.setContentAreaFilled(false);
-            }
-        });
-        // actionListener 将在 replacePanel 创建后设置
+        toggleReplaceBtn.setVisible(enableReplace);
+        toggleReplaceBtn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 
         // 搜索输入框 - 使用 SearchTextField 复用大小写敏感和整词匹配功能
         searchField = new SearchTextField();
@@ -137,6 +122,7 @@ public class SearchReplacePanel extends JPanel {
                     }
                     clearSearchHighlights();
                     statusLabel.setText("");
+                    searchField.putClientProperty(FlatClientProperties.OUTLINE, null);
                 } else {
                     scheduleSearchUpdate();
                 }
@@ -324,23 +310,8 @@ public class SearchReplacePanel extends JPanel {
         btn.setPreferredSize(new Dimension(24, 24));
         btn.setMaximumSize(new Dimension(24, 24));
         btn.setFocusable(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        // 添加悬停效果
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                btn.setContentAreaFilled(true);
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                btn.setContentAreaFilled(false);
-            }
-        });
-
+        btn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         if (listener != null) {
             btn.addActionListener(listener);
         }
@@ -505,7 +476,7 @@ public class SearchReplacePanel extends JPanel {
     }
 
     /**
-     * 根据搜索结果更新状态标签
+     * 根据搜索结果更新状态标签，并通过 outline 给搜索框着色反馈
      */
     private void updateStatusFromResult(SearchResult result) {
         if (result.wasFound()) {
@@ -518,8 +489,14 @@ public class SearchReplacePanel extends JPanel {
             } else {
                 statusLabel.setText("");
             }
+            // 有结果：清除红色边框
+            searchField.putClientProperty(FlatClientProperties.OUTLINE, null);
         } else {
             statusLabel.setText(MSG_NO_RESULTS);
+            // 无结果且搜索框非空：显示红色边框（同 IDEA 行为）
+            if (!searchField.getText().isEmpty()) {
+                searchField.putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_ERROR);
+            }
         }
     }
 
@@ -658,6 +635,7 @@ public class SearchReplacePanel extends JPanel {
         String searchText = searchField.getText();
         if (searchText.isEmpty()) {
             statusLabel.setText("");
+            searchField.putClientProperty(FlatClientProperties.OUTLINE, null);
             return;
         }
 
@@ -680,11 +658,14 @@ public class SearchReplacePanel extends JPanel {
                 if (firstResult.wasFound()) {
                     // 显示 "1 of total"
                     statusLabel.setText("1 of " + totalCount);
+                    searchField.putClientProperty(FlatClientProperties.OUTLINE, null);
                 } else {
                     statusLabel.setText(MSG_NO_RESULTS);
+                    searchField.putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_ERROR);
                 }
             } else {
                 statusLabel.setText(MSG_NO_RESULTS);
+                searchField.putClientProperty(FlatClientProperties.OUTLINE, FlatClientProperties.OUTLINE_ERROR);
             }
         } finally {
             // 不恢复光标，保持在第一个匹配位置

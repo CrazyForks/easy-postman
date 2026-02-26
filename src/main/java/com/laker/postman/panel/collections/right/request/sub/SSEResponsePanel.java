@@ -32,7 +32,7 @@ public class SSEResponsePanel extends JPanel {
     private final JTable table;
     private final DefaultTableModel tableModel;
     private final JComboBox<String> typeFilterBox;
-    private final JTextField searchField;
+    private final SearchTextField searchField;
     private final ClearButton clearButton;
     private final List<MessageRow> allRows = new ArrayList<>();
 
@@ -251,6 +251,8 @@ public class SSEResponsePanel extends JPanel {
             Icon summaryIcon = getSummaryIcon(row.testResults);
             tableModel.addRow(new Object[]{row.messageType.icon, row.time, row.content, summaryIcon});
         }
+        // 有搜索词且无结果时搜索框变红
+        searchField.setNoResult(!search.isEmpty() && filtered.isEmpty());
     }
 
     // 行数据

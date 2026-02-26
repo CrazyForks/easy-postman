@@ -56,7 +56,7 @@ public class EnvironmentPanel extends SingletonBasePanel {
     private transient Environment currentEnvironment;
     private JList<EnvironmentItem> environmentList;
     private DefaultListModel<EnvironmentItem> environmentListModel;
-    private JTextField searchField;
+    private SearchTextField searchField;
     private ImportButton importBtn;
     private String originalVariablesSnapshot; // 原始变量快照，直接用json字符串
     private boolean isLoadingData = false; // 用于控制是否正在加载数据，防止自动保存
@@ -733,6 +733,9 @@ public class EnvironmentPanel extends SingletonBasePanel {
         if (!environmentListModel.isEmpty()) {
             environmentList.setSelectedIndex(Math.max(activeIdx, 0));
         }
+        // 无结果且有搜索词时搜索框变红
+        boolean noResult = environmentListModel.isEmpty() && filter != null && !filter.isEmpty();
+        searchField.setNoResult(noResult);
     }
 
     private void renameSelectedEnvironment() {
@@ -1025,8 +1028,8 @@ public class EnvironmentPanel extends SingletonBasePanel {
         boolean wholeWord = tableSearchField.isWholeWord();
 
         if (keyword == null || keyword.trim().isEmpty()) {
-            // 清空搜索时，显示所有行
             variablesTablePanel.getTable().setRowSorter(null);
+            tableSearchField.setNoResult(false);
             return;
         }
 
@@ -1041,24 +1044,16 @@ public class EnvironmentPanel extends SingletonBasePanel {
         RowFilter<TableModel, Object> rowFilter = new RowFilter<>() {
             @Override
             public boolean include(Entry<? extends TableModel, ?> entry) {
-                // 获取 Name 和 Value 列的值（列索引：1=Name, 2=Value）
                 Object nameObj = entry.getValue(1);
                 Object valueObj = entry.getValue(2);
-
                 String name = nameObj != null ? nameObj.toString() : "";
                 String value = valueObj != null ? valueObj.toString() : "";
-
-                // 转换为搜索文本
                 String searchName = caseSensitive ? name : name.toLowerCase();
                 String searchValue = caseSensitive ? value : value.toLowerCase();
-
-                // 判断是否匹配
                 if (wholeWord) {
-                    // 整词匹配
                     return matchesWholeWord(searchName, searchKeyword) ||
                             matchesWholeWord(searchValue, searchKeyword);
                 } else {
-                    // 包含匹配
                     return searchName.contains(searchKeyword) ||
                             searchValue.contains(searchKeyword);
                 }
@@ -1067,6 +1062,10 @@ public class EnvironmentPanel extends SingletonBasePanel {
 
         sorter.setRowFilter(rowFilter);
         variablesTablePanel.getTable().setRowSorter(sorter);
+
+        // 无可见行时搜索框变红
+        boolean noResult = variablesTablePanel.getTable().getRowCount() == 0;
+        tableSearchField.setNoResult(noResult);
     }
 
     /**

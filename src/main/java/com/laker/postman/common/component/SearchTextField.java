@@ -120,4 +120,13 @@ public class SearchTextField extends FlatTextField {
         putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT, toolbar);
     }
 
+    /**
+     * 设置搜索无结果状态：无结果时输入框变红，有结果时恢复正常（同 IDEA 行为）。
+     *
+     * @param noResult true=无结果（红色边框），false=有结果或清空（恢复正常）
+     */
+    public void setNoResult(boolean noResult) {
+        putClientProperty(FlatClientProperties.OUTLINE, noResult ? FlatClientProperties.OUTLINE_ERROR : null);
+    }
+
 }

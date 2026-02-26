@@ -186,6 +186,7 @@ public class ConsolePanel extends SingletonBasePanel {
         consoleLogArea.getHighlighter().removeAllHighlights();
 
         if (keyword.isEmpty()) {
+            searchField.setNoResult(false);
             updateMatchCounter();
             return;
         }
@@ -220,6 +221,9 @@ public class ConsolePanel extends SingletonBasePanel {
             highlightAllMatches(keyword.length());
             highlightCurrentMatch(keyword.length());
         }
+
+        // 无匹配时搜索框变红，有匹配时恢复正常
+        searchField.setNoResult(matchPositions.isEmpty());
 
         updateMatchCounter();
     }

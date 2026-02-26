@@ -1,5 +1,6 @@
 package com.laker.postman.panel.workspace.components;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.model.GitRepoSource;
 import com.laker.postman.model.Workspace;
 import com.laker.postman.model.WorkspaceType;
@@ -12,8 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -175,38 +174,9 @@ public class WorkspaceDetailPanel extends JPanel {
         private static JButton makeIconBtn(Icon icon, String tooltip) {
             JButton btn = new JButton(icon);
             btn.setToolTipText(tooltip);
-            btn.setBorderPainted(false);
-            btn.setContentAreaFilled(false);
             btn.setFocusPainted(false);
-            btn.setOpaque(false);
             btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            btn.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    btn.setContentAreaFilled(true);
-                    btn.setOpaque(true);
-                    Color hoverBg = UIManager.getColor("Button.hoverBackground");
-                    btn.setBackground(hoverBg != null ? hoverBg : new Color(0, 0, 0, 20));
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    btn.setContentAreaFilled(false);
-                    btn.setOpaque(false);
-                }
-
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    Color pressedBg = UIManager.getColor("Button.pressedBackground");
-                    btn.setBackground(pressedBg != null ? pressedBg : new Color(0, 0, 0, 40));
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    if (btn.contains(e.getPoint())) mouseEntered(e);
-                    else mouseExited(e);
-                }
-            });
+            btn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
             return btn;
         }
     }

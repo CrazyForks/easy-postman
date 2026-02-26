@@ -1,5 +1,6 @@
 package com.laker.postman.panel.topmenu;
 
+import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatDesktop;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.formdev.flatlaf.util.SystemInfo;
@@ -34,8 +35,6 @@ import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 
@@ -570,24 +569,9 @@ public class TopMenuBar extends SingletonBaseMenuBar implements IRefreshable {
         button.setIcon(icon);
         button.setToolTipText(tooltip);
         button.setFocusable(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
         button.setPreferredSize(new Dimension(24, 24));
         button.addActionListener(action);
-
-        // 添加鼠标悬停效果
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setContentAreaFilled(true);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setContentAreaFilled(false);
-            }
-        });
-
+        button.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         return button;
     }
 

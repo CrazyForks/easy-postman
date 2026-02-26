@@ -362,27 +362,12 @@ public class MarkdownEditorPanel extends JPanel {
         button.setToolTipText(tooltip);
         button.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, 0));
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
         button.setMargin(new Insets(4, 8, 4, 8));
         button.setPreferredSize(null);
         button.setMinimumSize(new Dimension(28, 28));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) {
-                    button.setContentAreaFilled(true);
-                    button.setBackground(new Color(240, 240, 240));
-                }
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setContentAreaFilled(false);
-            }
-        });
+        button.putClientProperty(com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE,
+                com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
 
         if (action != null) {
             button.addActionListener(action);
@@ -402,38 +387,12 @@ public class MarkdownEditorPanel extends JPanel {
     private void styleToggleButton(JToggleButton button) {
         button.setFont(FontsUtil.getDefaultFontWithOffset(Font.PLAIN, 0));
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
         button.setMargin(new Insets(4, 10, 4, 10));
         button.setPreferredSize(null);
         button.setMinimumSize(new Dimension(32, 28));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        button.addItemListener(e -> {
-            if (button.isSelected()) {
-                button.setContentAreaFilled(true);
-                button.setBackground(new Color(220, 230, 240));
-            } else {
-                button.setContentAreaFilled(false);
-            }
-        });
-
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                if (!button.isSelected()) {
-                    button.setContentAreaFilled(true);
-                    button.setBackground(new Color(240, 240, 240));
-                }
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                if (!button.isSelected()) {
-                    button.setContentAreaFilled(false);
-                }
-            }
-        });
+        button.putClientProperty(com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE,
+                com.formdev.flatlaf.FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
     }
 
     private Component createVerticalDivider() {

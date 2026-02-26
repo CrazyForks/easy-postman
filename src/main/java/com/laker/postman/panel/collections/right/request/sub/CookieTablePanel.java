@@ -271,8 +271,10 @@ public class CookieTablePanel extends JPanel {
         String text = searchField.getText().trim();
         if (text.isEmpty()) {
             sorter.setRowFilter(null);
+            searchField.setNoResult(false);
         } else {
             sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+            searchField.setNoResult(table.getRowCount() == 0);
         }
     }
 

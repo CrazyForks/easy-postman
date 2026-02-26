@@ -84,6 +84,7 @@ public class LeftTopPanel extends SingletonBasePanel {
                 RequestCollectionsLeftPanel leftPanel = SingletonFactory.getInstance(RequestCollectionsLeftPanel.class);
                 String text = searchField.getText().trim();
                 if (text.isEmpty()) {
+                    searchField.setNoResult(false);
                     // 展开所有一级分组，显示全部
                     expandAll(leftPanel.getRequestTree(), false);
                     leftPanel.getTreeModel().setRoot(leftPanel.getRootTreeNode());
@@ -96,7 +97,9 @@ public class LeftTopPanel extends SingletonBasePanel {
                 boolean wholeWord = searchField.isWholeWord();
 
                 DefaultMutableTreeNode filteredRoot = new DefaultMutableTreeNode(ROOT);
-                filterNodes(leftPanel.getRootTreeNode(), filteredRoot, text, caseSensitive, wholeWord);
+                boolean hasResult = filterNodes(leftPanel.getRootTreeNode(), filteredRoot, text, caseSensitive, wholeWord);
+                // 无结果时搜索框变红，有结果时恢复正常
+                searchField.setNoResult(!hasResult);
                 leftPanel.getTreeModel().setRoot(filteredRoot);
                 leftPanel.getTreeModel().reload();
                 expandAll(leftPanel.getRequestTree(), true);
@@ -121,14 +124,13 @@ public class LeftTopPanel extends SingletonBasePanel {
         // 监听搜索选项变化，触发重新过滤
         searchField.addPropertyChangeListener("caseSensitive", evt -> {
             if (!searchField.getText().isEmpty()) {
-                // 直接触发过滤逻辑
                 RequestCollectionsLeftPanel leftPanel = SingletonFactory.getInstance(RequestCollectionsLeftPanel.class);
                 String text = searchField.getText().trim();
                 boolean caseSensitive = searchField.isCaseSensitive();
                 boolean wholeWord = searchField.isWholeWord();
-
                 DefaultMutableTreeNode filteredRoot = new DefaultMutableTreeNode(ROOT);
-                filterNodes(leftPanel.getRootTreeNode(), filteredRoot, text, caseSensitive, wholeWord);
+                boolean hasResult = filterNodes(leftPanel.getRootTreeNode(), filteredRoot, text, caseSensitive, wholeWord);
+                searchField.setNoResult(!hasResult);
                 leftPanel.getTreeModel().setRoot(filteredRoot);
                 leftPanel.getTreeModel().reload();
                 expandAll(leftPanel.getRequestTree(), true);
@@ -136,14 +138,13 @@ public class LeftTopPanel extends SingletonBasePanel {
         });
         searchField.addPropertyChangeListener("wholeWord", evt -> {
             if (!searchField.getText().isEmpty()) {
-                // 直接触发过滤逻辑
                 RequestCollectionsLeftPanel leftPanel = SingletonFactory.getInstance(RequestCollectionsLeftPanel.class);
                 String text = searchField.getText().trim();
                 boolean caseSensitive = searchField.isCaseSensitive();
                 boolean wholeWord = searchField.isWholeWord();
-
                 DefaultMutableTreeNode filteredRoot = new DefaultMutableTreeNode(ROOT);
-                filterNodes(leftPanel.getRootTreeNode(), filteredRoot, text, caseSensitive, wholeWord);
+                boolean hasResult = filterNodes(leftPanel.getRootTreeNode(), filteredRoot, text, caseSensitive, wholeWord);
+                searchField.setNoResult(!hasResult);
                 leftPanel.getTreeModel().setRoot(filteredRoot);
                 leftPanel.getTreeModel().reload();
                 expandAll(leftPanel.getRequestTree(), true);

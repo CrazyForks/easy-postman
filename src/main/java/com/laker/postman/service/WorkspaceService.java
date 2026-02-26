@@ -305,15 +305,13 @@ public class WorkspaceService {
             // 确保新目录存在
             Files.createDirectories(newDefaultDir);
 
-            // 若迁移标记文件已存在，说明之前已完成迁移，直接同步 path 后返回，避免重复迁移
+            // 若迁移标记文件已存在，说明之前已完成迁移，直接返回，避免重复迁移
             Path migratedMarker = newDefaultDir.resolve(".migrated");
             if (Files.exists(migratedMarker)) {
-                workspaces.stream()
-                        .filter(WorkspaceStorageUtil::isDefaultWorkspace)
-                        .forEach(ws -> ws.setPath(ConfigPathConstants.DEFAULT_WORKSPACE_DIR));
                 return;
             }
-            log.info("Migrating default workspace at: {}", rootDir);
+
+            log.info(" ======!!!!!! Migrating default workspace at: {}", rootDir);
 
             // 1. 迁移数据文件（collections.json / environments.json / README.md）
             //    .git/ 和 .gitignore 不在迁移范围内（见 Javadoc）

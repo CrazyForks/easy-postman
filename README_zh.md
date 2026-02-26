@@ -12,6 +12,8 @@
 [![GitHub stars](https://img.shields.io/github/stars/lakernote/easy-postman?style=flat-square&color=yellow)](https://github.com/lakernote/easy-postman/stargazers)
 [![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/lakernote/easy-postman/releases)
+[![GitHub](https://img.shields.io/badge/GitHub-lakernote-181717?style=flat-square&logo=github)](https://github.com/lakernote)
+[![Gitee](https://img.shields.io/badge/Gitee-lakernote-C71D23?style=flat-square&logo=gitee)](https://gitee.com/lakernote)
 
 [English](README.md) · [简体中文](README_zh.md) · [📦 下载](https://github.com/lakernote/easy-postman/releases) · [📖 文档](docs/FEATURES_zh.md) · [💬 讨论区](https://github.com/lakernote/easy-postman/discussions)
 

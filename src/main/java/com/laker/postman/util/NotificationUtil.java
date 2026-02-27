@@ -38,14 +38,18 @@ public class NotificationUtil {
     @Getter
     @RequiredArgsConstructor
     public enum NotificationType {
-        SUCCESS(ModernColors.SUCCESS, "✓", "Success"),
-        INFO(ModernColors.INFO, "i", "Information"),
-        WARNING(ModernColors.WARNING, "!", "Warning"),
-        ERROR(ModernColors.ERROR, "✕", "Error");
+        SUCCESS(ModernColors.SUCCESS, "✓", MessageKeys.NOTIFICATION_TYPE_SUCCESS),
+        INFO(ModernColors.INFO, "i", MessageKeys.NOTIFICATION_TYPE_INFO),
+        WARNING(ModernColors.WARNING, "!", MessageKeys.NOTIFICATION_TYPE_WARNING),
+        ERROR(ModernColors.ERROR, "✕", MessageKeys.NOTIFICATION_TYPE_ERROR);
 
         private final Color color;
         private final String icon;
-        private final String defaultTitle;
+        private final String titleKey;
+
+        public String getDefaultTitle() {
+            return I18nUtil.getMessage(titleKey);
+        }
     }
 
     // ==================== 全局配置 ====================
@@ -168,7 +172,7 @@ public class NotificationUtil {
         private Timer autoCloseTimer;
         private Timer slideTimer;
         private Timer fadeTimer;
-        private JLabel bodyLabel;
+        private JTextArea bodyLabel;
         private JPanel rootPanel;
         private JButton closeButton;
 
@@ -193,10 +197,13 @@ public class NotificationUtil {
                     ? customTitle : type.getDefaultTitle();
             rootPanel = buildRootPanel(message, title, seconds);
             setContentPane(rootPanel);
-            pack();
-
-            int w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rootPanel.getPreferredSize().width));
-            setSize(w, getHeight());
+            // 先固定宽度并 pack()，使 JTextArea 按实际宽度折行后再计算高度
+            setSize(MAX_WIDTH, 1);
+            // 让 JTextArea 以分配到的宽度计算折行后的 preferred height
+            int bodyW = MAX_WIDTH - H_PAD * 2;
+            bodyLabel.setSize(bodyW, 1);
+            int finalH = rootPanel.getPreferredSize().height;
+            setSize(MAX_WIDTH, finalH);
             targetPos = calculatePosition(stackOffset);
         }
 
@@ -358,12 +365,17 @@ public class NotificationUtil {
             body.setOpaque(false);
             body.setBorder(BorderFactory.createEmptyBorder(V_PAD, H_PAD, V_PAD, H_PAD));
 
-            bodyLabel = new JLabel(formatHtml(message, false));
+            bodyLabel = new JTextArea(getDisplayText(message, false));
+            bodyLabel.setLineWrap(true);
+            bodyLabel.setWrapStyleWord(true);
+            bodyLabel.setEditable(false);
+            bodyLabel.setFocusable(false);
+            bodyLabel.setOpaque(false);
+            bodyLabel.setBorder(null);
             boolean dark = FlatLaf.isLafDark();
             bodyLabel.setForeground(dark ? new Color(210, 213, 216) : new Color(44, 46, 50));
             Font lf = UIManager.getFont("Label.font");
-            if (lf != null) bodyLabel.setFont(lf.deriveFont(Font.PLAIN, (float) lf.getSize()));
-            bodyLabel.setVerticalAlignment(SwingConstants.TOP);
+            if (lf != null) bodyLabel.setFont(lf.deriveFont(Font.PLAIN, lf.getSize2D()));
 
             body.add(bodyLabel, BorderLayout.CENTER);
 
@@ -515,10 +527,11 @@ public class NotificationUtil {
 
         private void toggleExpand() {
             isExpanded = !isExpanded;
-            bodyLabel.setText(formatHtml(fullMessage, isExpanded));
-            pack();
-            int w = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, rootPanel.getPreferredSize().width));
-            setSize(w, getHeight());
+            bodyLabel.setText(getDisplayText(fullMessage, isExpanded));
+            int bodyW = MAX_WIDTH - H_PAD * 2;
+            bodyLabel.setSize(bodyW, 1);
+            int finalH = rootPanel.getPreferredSize().height;
+            setSize(MAX_WIDTH, finalH);
             targetPos = calculatePosition(stackOffset);
             setLocation(targetPos);
             updateToastPositions();
@@ -607,42 +620,26 @@ public class NotificationUtil {
             return new Color(Math.min(255, (int) (c.getRed() + (255 - c.getRed()) * f)), Math.min(255, (int) (c.getGreen() + (255 - c.getGreen()) * f)), Math.min(255, (int) (c.getBlue() + (255 - c.getBlue()) * f)));
         }
 
-        private String toHex(Color c) {
-            return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
-        }
 
-        private String formatHtml(String message, boolean expanded) {
+        /**
+         * 根据展开状态返回显示文本（纯文本，供 JTextArea 使用）。
+         * 折叠时只显示前 COLLAPSED_MAX_LINES 行，末尾加省略提示。
+         */
+        private String getDisplayText(String message, boolean expanded) {
             if (message == null || message.isBlank()) return "";
-            String escaped = message.replace("&", "&amp;").replace("<", "&lt;")
-                    .replace(">", "&gt;").replace("\"", "&quot;");
-            String[] lines = escaped.split("\n", -1);
-            int bodyWidth = MAX_WIDTH - H_PAD * 2 - 32;
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("<html><body style='width:").append(bodyWidth)
-                    .append("px;margin:0;padding:0;word-wrap:break-word;'>");
-
+            String[] lines = message.split("\n", -1);
             boolean needFold = lines.length > COLLAPSED_MAX_LINES || message.length() > 120;
             if (!expanded && needFold) {
                 int show = Math.min(lines.length, COLLAPSED_MAX_LINES);
+                StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < show; i++) {
                     sb.append(lines[i]);
-                    if (i < show - 1) sb.append("<br/>");
+                    if (i < show - 1) sb.append("\n");
                 }
-                sb.append("… <span style='color:").append(toHex(type.getColor()))
-                        .append(";font-weight:bold;'>[展开]</span>");
-            } else {
-                for (int i = 0; i < lines.length; i++) {
-                    sb.append(lines[i]);
-                    if (i < lines.length - 1) sb.append("<br/>");
-                }
-                if (needFold) {
-                    sb.append(" <span style='color:").append(toHex(type.getColor()))
-                            .append(";font-weight:bold;'>[收起]</span>");
-                }
+                sb.append("… ").append(I18nUtil.getMessage(MessageKeys.NOTIFICATION_EXPAND));
+                return sb.toString();
             }
-            sb.append("</body></html>");
-            return sb.toString();
+            return needFold ? message + " " + I18nUtil.getMessage(MessageKeys.NOTIFICATION_COLLAPSE) : message;
         }
 
         private void copyToClipboard(String text) {
@@ -663,4 +660,3 @@ public class NotificationUtil {
         }
     }
 }
-

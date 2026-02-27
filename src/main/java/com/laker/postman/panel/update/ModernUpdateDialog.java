@@ -28,9 +28,9 @@ public class ModernUpdateDialog extends JDialog {
     public ModernUpdateDialog(Frame parent, UpdateInfo updateInfo) {
         super(parent, I18nUtil.getMessage(MessageKeys.UPDATE_NEW_VERSION_AVAILABLE), true);
         initComponents(updateInfo);
-        setMinimumSize(new Dimension(520, 360));
+        setMinimumSize(new Dimension(550, 360));
         pack();
-        setSize(Math.max(getWidth(), 600), Math.max(getHeight(), 420));
+        setSize(Math.max(getWidth(), 650), Math.max(getHeight(), 420));
         setLocationRelativeTo(parent);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setResizable(true);

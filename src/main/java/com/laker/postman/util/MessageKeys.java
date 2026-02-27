@@ -1961,4 +1961,12 @@ public final class MessageKeys {
     public static final String CERT_CONSOLE_VALIDATION_FAILED = "cert.console.validation_failed";
     public static final String CERT_CONSOLE_FILE_NOT_FOUND = "cert.console.file_not_found";
 
+    // ==================== Notification Toast ====================
+    public static final String NOTIFICATION_TYPE_SUCCESS = "notification.type.success";
+    public static final String NOTIFICATION_TYPE_INFO = "notification.type.info";
+    public static final String NOTIFICATION_TYPE_WARNING = "notification.type.warning";
+    public static final String NOTIFICATION_TYPE_ERROR = "notification.type.error";
+    public static final String NOTIFICATION_EXPAND = "notification.expand";
+    public static final String NOTIFICATION_COLLAPSE = "notification.collapse";
+
 }

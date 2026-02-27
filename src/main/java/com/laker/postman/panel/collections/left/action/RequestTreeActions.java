@@ -14,6 +14,7 @@ import com.laker.postman.panel.functional.FunctionalPanel;
 import com.laker.postman.panel.sidebar.SidebarTabPanel;
 import com.laker.postman.service.collections.RequestsPersistence;
 import com.laker.postman.service.curl.CurlParser;
+import com.laker.postman.service.http.HttpRequestFactory;
 import com.laker.postman.service.http.PreparedRequestBuilder;
 import com.laker.postman.service.postman.PostmanCollectionExporter;
 import com.laker.postman.service.workspace.WorkspaceTransferHelper;
@@ -109,6 +110,24 @@ public class RequestTreeActions {
     public void showAddRequestDialog(DefaultMutableTreeNode groupNode) {
         AddRequestDialog dialog = new AddRequestDialog(groupNode, leftPanel);
         dialog.show();
+    }
+
+    /**
+     * 直接在指定分组下创建一个默认 HTTP GET 请求，不弹对话框（类似 Postman 点击 "+" 的行为）
+     */
+    public void addHttpRequestDirectly(DefaultMutableTreeNode groupNode) {
+        if (groupNode == null) return;
+        HttpRequestItem item = HttpRequestFactory.createDefaultRequest();
+        item.setName("New Request");
+        item.setMethod("GET");
+        item.setUrl("");
+        item.setProtocol(RequestItemProtocolEnum.HTTP);
+        DefaultMutableTreeNode reqNode = new DefaultMutableTreeNode(new Object[]{REQUEST, item});
+        groupNode.add(reqNode);
+        leftPanel.getTreeModel().reload(groupNode);
+        leftPanel.getRequestTree().expandPath(new TreePath(groupNode.getPath()));
+        leftPanel.getPersistence().saveRequestGroups();
+        SingletonFactory.getInstance(RequestEditPanel.class).showOrCreateTab(item);
     }
 
     /**

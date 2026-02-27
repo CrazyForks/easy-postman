@@ -8,6 +8,9 @@ import com.laker.postman.model.SavedResponse;
 import com.laker.postman.panel.collections.left.RequestCollectionsLeftPanel;
 import com.laker.postman.panel.collections.left.action.RequestTreeActions;
 import com.laker.postman.panel.collections.right.RequestEditPanel;
+import com.laker.postman.util.I18nUtil;
+import com.laker.postman.util.IconUtil;
+import com.laker.postman.util.MessageKeys;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -59,24 +62,41 @@ public class RequestTreeMouseHandler extends MouseAdapter {
     }
 
     /**
-     * 根据鼠标位置动态设置 tooltip：
-     * 鼠标在 group 行的 "+" 图标区域时显示 "Add Request"，否则清空
+     * 根据鼠标位置动态设置 tooltip
      */
     private void updateTooltip(int mouseX, int row) {
-        if (row >= 0 && isOnAddButtonX(mouseX) && isGroupRow(row)) {
-            requestTree.setToolTipText("Add Request");
-        } else {
-            requestTree.setToolTipText(null);
+        if (row >= 0 && isGroupRow(row)) {
+            if (isOnMoreButtonX(mouseX)) {
+                requestTree.setToolTipText("More actions");
+                return;
+            }
+            if (isOnAddButtonX(mouseX)) {
+                requestTree.setToolTipText("Add Request");
+                return;
+            }
         }
+        requestTree.setToolTipText(null);
     }
 
-    /** 判断 X 坐标是否在 "+" 图标区域（树右侧 ADD_BUTTON_WIDTH 像素内） */
+    /**
+     * 最右侧 MORE_BUTTON_WIDTH 像素 → more 按钮
+     */
+    private boolean isOnMoreButtonX(int mouseX) {
+        return mouseX >= requestTree.getWidth() - RequestTreeCellRenderer.MORE_BUTTON_WIDTH;
+    }
+
+    /**
+     * more 按钮左侧 ADD_BUTTON_WIDTH 像素 → plus 按钮
+     */
     private boolean isOnAddButtonX(int mouseX) {
         int treeWidth = requestTree.getWidth();
-        return mouseX >= treeWidth - RequestTreeCellRenderer.ADD_BUTTON_WIDTH;
+        return mouseX >= treeWidth - RequestTreeCellRenderer.MORE_BUTTON_WIDTH - RequestTreeCellRenderer.ADD_BUTTON_WIDTH
+                && mouseX < treeWidth - RequestTreeCellRenderer.MORE_BUTTON_WIDTH;
     }
 
-    /** 判断指定行是否是 GROUP 节点 */
+    /**
+     * 判断指定行是否是 GROUP 节点
+     */
     private boolean isGroupRow(int row) {
         TreePath path = requestTree.getPathForRow(row);
         if (path == null) return false;
@@ -111,7 +131,10 @@ public class RequestTreeMouseHandler extends MouseAdapter {
     @Override
     public void mousePressed(MouseEvent e) {
         if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 1) {
-            // 先判断是否点到了 "+" 按钮
+            if (isClickOnMoreButton(e)) {
+                handleMoreButtonClick(e);
+                return;
+            }
             if (isClickOnAddButton(e)) {
                 handleAddButtonClick(e);
                 return;
@@ -125,24 +148,25 @@ public class RequestTreeMouseHandler extends MouseAdapter {
     }
 
     /**
-     * 判断点击是否落在 GROUP 节点右侧的 "+" 按钮区域
+     * 是否点到 "+" 按钮（more 左侧区域，GROUP 行）
      */
     private boolean isClickOnAddButton(MouseEvent e) {
         int row = getRowForYPosition(e.getY());
-        if (row < 0) return false;
-        TreePath path = requestTree.getPathForRow(row);
-        if (path == null) return false;
-        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-        if (!(node.getUserObject() instanceof Object[] obj) || !GROUP.equals(obj[0])) return false;
-
-        // "+" 号固定在行最右侧 ADD_BUTTON_WIDTH 像素（树宽度 = viewport 宽度）
-        int treeWidth = requestTree.getWidth();
-        int addBtnStart = treeWidth - RequestTreeCellRenderer.ADD_BUTTON_WIDTH;
-        return e.getX() >= addBtnStart;
+        if (row < 0 || !isGroupRow(row)) return false;
+        return isOnAddButtonX(e.getX());
     }
 
     /**
-     * 点击 "+" 按钮：弹出添加请求对话框
+     * 是否点到 "⋯" more 按钮（最右侧区域，GROUP 行）
+     */
+    private boolean isClickOnMoreButton(MouseEvent e) {
+        int row = getRowForYPosition(e.getY());
+        if (row < 0 || !isGroupRow(row)) return false;
+        return isOnMoreButtonX(e.getX());
+    }
+
+    /**
+     * 点击 "+" 按钮：直接创建 HTTP 请求，不弹对话框
      */
     private void handleAddButtonClick(MouseEvent e) {
         int row = getRowForYPosition(e.getY());
@@ -150,9 +174,64 @@ public class RequestTreeMouseHandler extends MouseAdapter {
         TreePath path = requestTree.getPathForRow(row);
         if (path == null) return;
         DefaultMutableTreeNode groupNode = (DefaultMutableTreeNode) path.getLastPathComponent();
-        // 先选中该节点
         requestTree.setSelectionPath(path);
-        actions.showAddRequestDialog(groupNode);
+        actions.addHttpRequestDirectly(groupNode);
+    }
+
+    /**
+     * 点击 "⋯" more 按钮：弹出 group 专属操作菜单
+     */
+    private void handleMoreButtonClick(MouseEvent e) {
+        int row = getRowForYPosition(e.getY());
+        if (row < 0) return;
+        TreePath path = requestTree.getPathForRow(row);
+        if (path == null) return;
+        requestTree.setSelectionPath(path);
+        DefaultMutableTreeNode groupNode = (DefaultMutableTreeNode) path.getLastPathComponent();
+        showGroupActionMenu(groupNode, e.getX(), e.getY());
+    }
+
+    /**
+     * 弹出 group 专属菜单（新增请求、新增分组等）
+     */
+    private void showGroupActionMenu(DefaultMutableTreeNode groupNode, int x, int y) {
+        JPopupMenu menu = new JPopupMenu();
+
+        JMenuItem addRequest = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_ADD_REQUEST),
+                IconUtil.createThemed("icons/request.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
+        addRequest.addActionListener(ev -> actions.showAddRequestDialog(groupNode));
+        menu.add(addRequest);
+
+        JMenuItem addGroup = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_ADD_GROUP),
+                IconUtil.createThemed("icons/group.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
+        addGroup.addActionListener(ev -> actions.addGroupUnderSelected());
+        menu.add(addGroup);
+
+        menu.addSeparator();
+
+        JMenuItem rename = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_RENAME),
+                IconUtil.createThemed("icons/edit.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
+        rename.addActionListener(ev -> actions.renameSelectedItem());
+        menu.add(rename);
+
+        JMenuItem duplicate = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_DUPLICATE),
+                IconUtil.createThemed("icons/duplicate.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
+        duplicate.addActionListener(ev -> actions.duplicateSelectedGroup());
+        menu.add(duplicate);
+
+        menu.addSeparator();
+
+        JMenuItem delete = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_DELETE),
+                IconUtil.createThemed("icons/delete.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
+        delete.addActionListener(ev -> actions.deleteSelectedItem());
+        menu.add(delete);
+
+        menu.show(requestTree, x, y);
     }
 
     /**

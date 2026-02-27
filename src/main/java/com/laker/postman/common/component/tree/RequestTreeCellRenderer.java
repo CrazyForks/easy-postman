@@ -33,14 +33,20 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
     public void setHoveredRow(int row) { this.hoveredRow = row; }
     public int getHoveredRow() { return hoveredRow; }
 
-    /** "+" 图标区域宽度（像素），用于命中测试：图标16px + 左右各4px = 24px */
-    public static final int ADD_BUTTON_WIDTH = 24;
+    /** "+" 图标区域宽度，距右边缘偏移：more(20) + plus(20) = 右侧40px内 */
+    public static final int ADD_BUTTON_WIDTH = 20;
+    /** "⋯" more 图标紧贴右边缘，宽度 20px */
+    public static final int MORE_BUTTON_WIDTH = 20;
 
     /** 当前渲染行是否需要显示 "+" 图标（GROUP 节点 hover 时） */
     private boolean showAddButton = false;
+    /** 当前渲染行是否需要显示 "⋯" more 图标（GROUP 节点 hover 时） */
+    private boolean showMoreButton = false;
 
     /** plus.svg 图标，主题适配，懒加载 */
     private transient Icon plusIcon = null;
+    /** more.svg 图标，主题适配，懒加载 */
+    private transient Icon moreIcon = null;
 
     private Icon getPlusIcon() {
         if (plusIcon == null) {
@@ -49,12 +55,20 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         return plusIcon;
     }
 
+    private Icon getMoreIcon() {
+        if (moreIcon == null) {
+            moreIcon = IconUtil.createThemed("icons/more.svg", ICON_SIZE, ICON_SIZE);
+        }
+        return moreIcon;
+    }
+
     @Override
     public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
                                                   boolean leaf, int row, boolean hasFocus) {
         super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
 
         showAddButton = false;
+        showMoreButton = false;
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
         Object userObject = node.getUserObject();
@@ -88,24 +102,38 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         }
         if (row == hoveredRow) {
             showAddButton = true;
+            showMoreButton = true;
         }
     }
 
     /**
-     * 绘制右侧 "+" 图标（GROUP hover 时）。
-     * 整行 hover 背景色由 JTree.paint() 统一绘制，不在此处处理。
+     * 绘制右侧 "+" 和 "⋯" 图标（GROUP hover 时）。
+     * 布局（从右到左）：| more(20px) | plus(20px) |
+     * 整行 hover 背景色由 JTree.paint() 统一绘制。
      */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (!showAddButton) return;
+        if (!showAddButton && !showMoreButton) return;
 
-        Icon icon = getPlusIcon();
         int w = getWidth();
         int h = getHeight();
-        int x = w - icon.getIconWidth() - 4;
-        int y = (h - icon.getIconHeight()) / 2;
-        icon.paintIcon(this, g, x, y);
+
+        // more 图标：贴右边缘
+        if (showMoreButton) {
+            Icon more = getMoreIcon();
+            int x = w - more.getIconWidth() - 2;
+            int y = (h - more.getIconHeight()) / 2;
+            more.paintIcon(this, g, x, y);
+        }
+
+        // plus 图标：在 more 左边
+        if (showAddButton) {
+            Icon plus = getPlusIcon();
+            int x = w - MORE_BUTTON_WIDTH - plus.getIconWidth() - 2;
+            int y = (h - plus.getIconHeight()) / 2;
+            plus.paintIcon(this, g, x, y);
+        }
     }
 
     private void applyRequestRendering(HttpRequestItem item) {

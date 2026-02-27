@@ -85,24 +85,38 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         return this;
     }
 
+    /** 两个图标总宽 + 间距，hover 时为文字预留的右侧空白 */
+    private static final int BUTTONS_RESERVED_WIDTH = ADD_BUTTON_WIDTH + MORE_BUTTON_WIDTH + 4;
+
     private void renderGroupNode(DefaultMutableTreeNode node, Object[] obj, int row) {
         Object groupData = obj[1];
         String groupName = groupData instanceof RequestGroup rg ? rg.getName() : String.valueOf(groupData);
         boolean isRootLevel = node.getParent() instanceof DefaultMutableTreeNode p &&
                 RequestCollectionsLeftPanel.ROOT.equals(String.valueOf(p.getUserObject()));
+        boolean isHover = (row == hoveredRow);
+
         if (isRootLevel) {
             setIcon(new FlatSVGIcon("icons/root_group.svg", ICON_SIZE, ICON_SIZE));
-            int baseFontSize = SettingManager.getUiFontSize();
-            String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
-            setText("<html><nobr><span style='font-weight:bold;font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
-                    + escapeHtml(groupName) + "</span></nobr></html>");
+            if (isHover) {
+                // hover 时用纯文本 + 加粗字体，JLabel 能自动省略超长文字
+                setFont(getFont().deriveFont(Font.BOLD));
+                setText(groupName);
+            } else {
+                int baseFontSize = SettingManager.getUiFontSize();
+                String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
+                setText("<html><nobr><span style='font-weight:bold;font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
+                        + escapeHtml(groupName) + "</span></nobr></html>");
+            }
         } else {
             setIcon(new FlatSVGIcon("icons/group.svg", ICON_SIZE, ICON_SIZE));
             setText(groupName);
         }
-        if (row == hoveredRow) {
+
+        if (isHover) {
             showAddButton = true;
             showMoreButton = true;
+            // 右侧加 padding，JLabel 省略号截断超长文字，为两个图标留出空间
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, BUTTONS_RESERVED_WIDTH));
         }
     }
 

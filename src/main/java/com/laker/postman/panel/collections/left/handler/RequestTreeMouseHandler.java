@@ -17,6 +17,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -215,6 +216,7 @@ public class RequestTreeMouseHandler extends MouseAdapter {
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_RENAME),
                 IconUtil.createThemed("icons/edit.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
         rename.addActionListener(ev -> actions.renameSelectedItem());
+        rename.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0));
         menu.add(rename);
 
         JMenuItem duplicate = new JMenuItem(
@@ -229,6 +231,7 @@ public class RequestTreeMouseHandler extends MouseAdapter {
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_DELETE),
                 IconUtil.createThemed("icons/delete.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
         delete.addActionListener(ev -> actions.deleteSelectedItem());
+        delete.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
         menu.add(delete);
 
         menu.show(requestTree, x, y);

@@ -1858,6 +1858,52 @@ public final class MessageKeys {
     public static final String TOOLBOX_CRON_ANALYSIS = "toolbox.cron.analysis";
     public static final String TOOLBOX_CRON_FIELDS = "toolbox.cron.fields";
     public static final String TOOLBOX_CRON_UNABLE_CALCULATE = "toolbox.cron.unable_calculate";
+    public static final String TOOLBOX_CRON_MODE_LABEL = "toolbox.cron.mode.label";
+    public static final String TOOLBOX_CRON_MODE_SPRING = "toolbox.cron.mode.spring";
+    public static final String TOOLBOX_CRON_MODE_LINUX = "toolbox.cron.mode.linux";
+    public static final String TOOLBOX_CRON_MODE_TOOLTIP_SPRING = "toolbox.cron.mode.tooltip.spring";
+    public static final String TOOLBOX_CRON_MODE_TOOLTIP_LINUX = "toolbox.cron.mode.tooltip.linux";
+    public static final String TOOLBOX_CRON_FORMAT_SPRING = "toolbox.cron.format.spring";
+    public static final String TOOLBOX_CRON_FORMAT_LINUX = "toolbox.cron.format.linux";
+    public static final String TOOLBOX_CRON_PLACEHOLDER_SPRING = "toolbox.cron.placeholder.spring";
+    public static final String TOOLBOX_CRON_PLACEHOLDER_LINUX = "toolbox.cron.placeholder.linux";
+    public static final String TOOLBOX_CRON_ERROR_INVALID_SPRING = "toolbox.cron.error.invalid.spring";
+    public static final String TOOLBOX_CRON_ERROR_INVALID_LINUX = "toolbox.cron.error.invalid.linux";
+    public static final String TOOLBOX_CRON_FIELD_SECOND = "toolbox.cron.field.second";
+    public static final String TOOLBOX_CRON_FIELD_MINUTE = "toolbox.cron.field.minute";
+    public static final String TOOLBOX_CRON_FIELD_HOUR = "toolbox.cron.field.hour";
+    public static final String TOOLBOX_CRON_FIELD_DAY = "toolbox.cron.field.day";
+    public static final String TOOLBOX_CRON_FIELD_MONTH = "toolbox.cron.field.month";
+    public static final String TOOLBOX_CRON_FIELD_WEEK = "toolbox.cron.field.week";
+    public static final String TOOLBOX_CRON_FIELD_WEEK_SPRING = "toolbox.cron.field.week.spring";
+    public static final String TOOLBOX_CRON_NEXT_COUNT = "toolbox.cron.next_count";
+    public static final String TOOLBOX_CRON_DESC_EVERY_SECOND = "toolbox.cron.desc.every_second";
+    public static final String TOOLBOX_CRON_DESC_EVERY_MINUTE = "toolbox.cron.desc.every_minute";
+    public static final String TOOLBOX_CRON_DESC_EVERY_MINUTE_AT_SECOND = "toolbox.cron.desc.every_minute_at_second";
+    public static final String TOOLBOX_CRON_DESC_EVERY_HOUR = "toolbox.cron.desc.every_hour";
+    public static final String TOOLBOX_CRON_DESC_EVERY_HOUR_AT = "toolbox.cron.desc.every_hour_at";
+    public static final String TOOLBOX_CRON_DESC_EVERY_HOUR_AT_MINUTE = "toolbox.cron.desc.every_hour_at_minute";
+    public static final String TOOLBOX_CRON_DESC_AT = "toolbox.cron.desc.at";
+    public static final String TOOLBOX_CRON_DESC_ON_DAY = "toolbox.cron.desc.on_day";
+    public static final String TOOLBOX_CRON_DESC_ON_WEEKDAY = "toolbox.cron.desc.on_weekday";
+    public static final String TOOLBOX_CRON_DESC_IN_MONTH = "toolbox.cron.desc.in_month";
+    public static final String TOOLBOX_CRON_DESC_IN_YEAR = "toolbox.cron.desc.in_year";
+    public static final String TOOLBOX_CRON_DESC_EVERY_N_MONTHS = "toolbox.cron.desc.every_n_months";
+    public static final String TOOLBOX_CRON_DESC_WEEK_WEEKDAYS = "toolbox.cron.desc.week.weekdays";
+    // month names
+    public static final String[] TOOLBOX_CRON_DESC_MONTHS = {
+        null,
+        "toolbox.cron.desc.month.1",  "toolbox.cron.desc.month.2",  "toolbox.cron.desc.month.3",
+        "toolbox.cron.desc.month.4",  "toolbox.cron.desc.month.5",  "toolbox.cron.desc.month.6",
+        "toolbox.cron.desc.month.7",  "toolbox.cron.desc.month.8",  "toolbox.cron.desc.month.9",
+        "toolbox.cron.desc.month.10", "toolbox.cron.desc.month.11", "toolbox.cron.desc.month.12"
+    };
+    // weekday names (index 0=Sun, 1=Mon … 6=Sat)
+    public static final String[] TOOLBOX_CRON_DESC_WEEKDAYS = {
+        "toolbox.cron.desc.week.sun", "toolbox.cron.desc.week.mon", "toolbox.cron.desc.week.tue",
+        "toolbox.cron.desc.week.wed", "toolbox.cron.desc.week.thu", "toolbox.cron.desc.week.fri",
+        "toolbox.cron.desc.week.sat"
+    };
 
     // ============ 客户端证书相关 ============
     public static final String CERT_TITLE = "cert.title";

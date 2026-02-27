@@ -1838,6 +1838,15 @@ public final class MessageKeys {
     public static final String TOOLBOX_CRON_QUICK_PRESETS = "toolbox.cron.quick_presets";
     public static final String TOOLBOX_CRON_COMMON_PRESETS = "toolbox.cron.common_presets";
     public static final String TOOLBOX_CRON_SPECIAL_CHARS = "toolbox.cron.special_chars";
+    public static final String TOOLBOX_CRON_COPIED = "toolbox.cron.copied";
+    public static final String TOOLBOX_CRON_SPECIAL_WILDCARD = "toolbox.cron.special.wildcard";
+    public static final String TOOLBOX_CRON_SPECIAL_QUESTION = "toolbox.cron.special.question";
+    public static final String TOOLBOX_CRON_SPECIAL_LAST = "toolbox.cron.special.last";
+    public static final String TOOLBOX_CRON_SPECIAL_WEEKDAY = "toolbox.cron.special.weekday";
+    public static final String TOOLBOX_CRON_SPECIAL_HASH = "toolbox.cron.special.hash";
+    public static final String TOOLBOX_CRON_SPECIAL_RANGE = "toolbox.cron.special.range";
+    public static final String TOOLBOX_CRON_SPECIAL_LIST = "toolbox.cron.special.list";
+    public static final String TOOLBOX_CRON_SPECIAL_STEP = "toolbox.cron.special.step";
     public static final String TOOLBOX_CRON_COMMON_EXPRESSIONS = "toolbox.cron.common_expressions";
     public static final String TOOLBOX_CRON_PRESET_EVERY_SECOND = "toolbox.cron.preset.every_second";
     public static final String TOOLBOX_CRON_PRESET_EVERY_MINUTE = "toolbox.cron.preset.every_minute";

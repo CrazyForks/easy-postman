@@ -125,7 +125,12 @@ public class RequestTreeActions {
         DefaultMutableTreeNode reqNode = new DefaultMutableTreeNode(new Object[]{REQUEST, item});
         groupNode.add(reqNode);
         leftPanel.getTreeModel().reload(groupNode);
-        leftPanel.getRequestTree().expandPath(new TreePath(groupNode.getPath()));
+        JTree tree = leftPanel.getRequestTree();
+        tree.expandPath(new TreePath(groupNode.getPath()));
+        // 选中并滚动到新创建的请求节点
+        TreePath newPath = new TreePath(reqNode.getPath());
+        tree.setSelectionPath(newPath);
+        tree.scrollPathToVisible(newPath);
         leftPanel.getPersistence().saveRequestGroups();
         SingletonFactory.getInstance(RequestEditPanel.class).showOrCreateTab(item);
     }

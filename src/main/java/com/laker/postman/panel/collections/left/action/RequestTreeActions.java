@@ -123,16 +123,21 @@ public class RequestTreeActions {
         item.setUrl("");
         item.setProtocol(RequestItemProtocolEnum.HTTP);
         DefaultMutableTreeNode reqNode = new DefaultMutableTreeNode(new Object[]{REQUEST, item});
-        groupNode.add(reqNode);
-        leftPanel.getTreeModel().reload(groupNode);
+        leftPanel.getTreeModel().insertNodeInto(reqNode, groupNode, groupNode.getChildCount());
         JTree tree = leftPanel.getRequestTree();
         tree.expandPath(new TreePath(groupNode.getPath()));
-        // 选中并滚动到新创建的请求节点
-        TreePath newPath = new TreePath(reqNode.getPath());
-        tree.setSelectionPath(newPath);
-        tree.scrollPathToVisible(newPath);
         leftPanel.getPersistence().saveRequestGroups();
         SingletonFactory.getInstance(RequestEditPanel.class).showOrCreateTab(item);
+        // 两层 invokeLater：
+        // 第一层确保在 mousePressed 整个事件链（包括 BasicTreeUI.MouseHandler）结束后执行；
+        // 第二层确保在 showOrCreateTab 里 tabbedPane.setSelectedIndex 触发的 FlatLaf 内部
+        // invokeLater（焦点转移等）执行完毕后，再执行我们的 setSelectionPath，
+        // 避免 FlatLaf 的焦点处理把选中视觉状态覆盖掉。
+        SwingUtilities.invokeLater(() -> SwingUtilities.invokeLater(() -> {
+            TreePath newPath = new TreePath(reqNode.getPath());
+            tree.setSelectionPath(newPath);
+            tree.scrollPathToVisible(newPath);
+        }));
     }
 
     /**

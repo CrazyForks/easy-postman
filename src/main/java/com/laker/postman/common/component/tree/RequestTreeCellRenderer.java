@@ -27,25 +27,44 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
 
     private static final int ICON_SIZE = 16;
 
-    /** 当前鼠标悬浮的行号，-1 表示无悬浮；由外部（MouseMotionListener）更新 */
+    /**
+     * 当前鼠标悬浮的行号，-1 表示无悬浮；由外部（MouseMotionListener）更新
+     */
     private int hoveredRow = -1;
 
-    public void setHoveredRow(int row) { this.hoveredRow = row; }
-    public int getHoveredRow() { return hoveredRow; }
+    public void setHoveredRow(int row) {
+        this.hoveredRow = row;
+    }
 
-    /** "+" 图标区域宽度，距右边缘偏移：more(20) + plus(20) = 右侧40px内 */
+    public int getHoveredRow() {
+        return hoveredRow;
+    }
+
+    /**
+     * "+" 图标区域宽度，距右边缘偏移：more(20) + plus(20) = 右侧40px内
+     */
     public static final int ADD_BUTTON_WIDTH = 20;
-    /** "⋯" more 图标紧贴右边缘，宽度 20px */
+    /**
+     * "⋯" more 图标紧贴右边缘，宽度 20px
+     */
     public static final int MORE_BUTTON_WIDTH = 20;
 
-    /** 当前渲染行是否需要显示 "+" 图标（GROUP 节点 hover 时） */
+    /**
+     * 当前渲染行是否需要显示 "+" 图标（GROUP 节点 hover 时）
+     */
     private boolean showAddButton = false;
-    /** 当前渲染行是否需要显示 "⋯" more 图标（GROUP 节点 hover 时） */
+    /**
+     * 当前渲染行是否需要显示 "⋯" more 图标（GROUP 节点 hover 时）
+     */
     private boolean showMoreButton = false;
 
-    /** plus.svg 图标，主题适配，懒加载 */
+    /**
+     * plus.svg 图标，主题适配，懒加载
+     */
     private transient Icon plusIcon = null;
-    /** more.svg 图标，主题适配，懒加载 */
+    /**
+     * more.svg 图标，主题适配，懒加载
+     */
     private transient Icon moreIcon = null;
 
     private Icon getPlusIcon() {
@@ -85,7 +104,9 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         return this;
     }
 
-    /** 两个图标总宽 + 间距，hover 时为文字预留的右侧空白 */
+    /**
+     * 两个图标总宽 + 间距，hover 时为文字预留的右侧空白
+     */
     private static final int BUTTONS_RESERVED_WIDTH = ADD_BUTTON_WIDTH + MORE_BUTTON_WIDTH + 4;
 
     private void renderGroupNode(DefaultMutableTreeNode node, Object[] obj, int row) {
@@ -98,13 +119,12 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         if (isRootLevel) {
             setIcon(new FlatSVGIcon("icons/root_group.svg", ICON_SIZE, ICON_SIZE));
             if (isHover) {
-                // hover 时用纯文本 + 加粗字体，JLabel 能自动省略超长文字
-                setFont(getFont().deriveFont(Font.BOLD));
+                // hover 时用纯文本，JLabel 能自动省略超长文字
                 setText(groupName);
             } else {
                 int baseFontSize = SettingManager.getUiFontSize();
                 String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
-                setText("<html><nobr><span style='font-weight:bold;font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
+                setText("<html><nobr><span style='font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
                         + escapeHtml(groupName) + "</span></nobr></html>");
             }
         } else {
@@ -205,7 +225,7 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         int timeFontSize = Math.max(7, baseFontSize - 6);
         return "<html><nobr>"
                 + "<span style='font-size:" + nameFontSize + "px'>" + safeName + "</span> "
-                + "<span style='color:" + statusColor + ";font-weight:bold;font-size:" + statusFontSize + "px'>" + code + "</span> "
+                + "<span style='color:" + statusColor + ";font-size:" + statusFontSize + "px'>" + code + "</span> "
                 + "<span style='color:#999999;font-size:" + timeFontSize + "px'>" + timeStr + "</span>"
                 + "</nobr></html>";
     }
@@ -218,7 +238,7 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         int methodFontSize = Math.max(7, baseFontSize - 5);
         int nameFontSize = Math.max(8, baseFontSize - 4);
         return "<html><nobr>"
-                + "<span style='color:" + color + ";font-weight:bold;font-size:" + methodFontSize + "px'>" + safeMethod + "</span> "
+                + "<span style='color:" + color + ";font-size:" + methodFontSize + "px'>" + safeMethod + "</span> "
                 + "<span style='font-size:" + nameFontSize + "px'>" + safeName + "</span>"
                 + "</nobr></html>";
     }

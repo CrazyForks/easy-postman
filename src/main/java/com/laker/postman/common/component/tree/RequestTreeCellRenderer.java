@@ -131,6 +131,10 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
             showMoreButton = true;
             // 右侧加 padding，JLabel 省略号截断超长文字，为两个图标留出空间
             setBorder(BorderFactory.createEmptyBorder(0, 0, 0, BUTTONS_RESERVED_WIDTH));
+        } else {
+            showAddButton = false;
+            showMoreButton = false;
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         }
     }
 

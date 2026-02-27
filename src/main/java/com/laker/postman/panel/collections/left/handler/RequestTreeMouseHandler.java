@@ -1,14 +1,17 @@
 package com.laker.postman.panel.collections.left.handler;
 
 import com.laker.postman.common.SingletonFactory;
+import com.laker.postman.common.component.tree.RequestTreeCellRenderer;
 import com.laker.postman.model.HttpRequestItem;
 import com.laker.postman.model.RequestGroup;
 import com.laker.postman.model.SavedResponse;
 import com.laker.postman.panel.collections.left.RequestCollectionsLeftPanel;
+import com.laker.postman.panel.collections.left.action.RequestTreeActions;
 import com.laker.postman.panel.collections.right.RequestEditPanel;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -23,21 +26,133 @@ import static com.laker.postman.panel.collections.left.RequestCollectionsLeftPan
 public class RequestTreeMouseHandler extends MouseAdapter {
     private final JTree requestTree;
     private final RequestTreePopupMenu popupMenu;
+    private final RequestTreeActions actions;
 
     public RequestTreeMouseHandler(JTree requestTree, RequestCollectionsLeftPanel leftPanel) {
         this.requestTree = requestTree;
         this.popupMenu = new RequestTreePopupMenu(requestTree, leftPanel);
+        this.actions = new RequestTreeActions(requestTree, leftPanel);
     }
+
+    // ==================== hover 追踪 ====================
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        handleHover(e);
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+        handleHover(e);
+    }
+
+    private void handleHover(MouseEvent e) {
+        int row = getRowForYPosition(e.getY());
+        updateHoveredRow(row);
+        updateTooltip(e.getX(), row);
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+        updateHoveredRow(-1);
+        requestTree.setToolTipText(null);
+    }
+
+    /**
+     * 根据鼠标位置动态设置 tooltip：
+     * 鼠标在 group 行的 "+" 图标区域时显示 "Add Request"，否则清空
+     */
+    private void updateTooltip(int mouseX, int row) {
+        if (row >= 0 && isOnAddButtonX(mouseX) && isGroupRow(row)) {
+            requestTree.setToolTipText("Add Request");
+        } else {
+            requestTree.setToolTipText(null);
+        }
+    }
+
+    /** 判断 X 坐标是否在 "+" 图标区域（树右侧 ADD_BUTTON_WIDTH 像素内） */
+    private boolean isOnAddButtonX(int mouseX) {
+        int treeWidth = requestTree.getWidth();
+        return mouseX >= treeWidth - RequestTreeCellRenderer.ADD_BUTTON_WIDTH;
+    }
+
+    /** 判断指定行是否是 GROUP 节点 */
+    private boolean isGroupRow(int row) {
+        TreePath path = requestTree.getPathForRow(row);
+        if (path == null) return false;
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+        return node.getUserObject() instanceof Object[] obj && GROUP.equals(obj[0]);
+    }
+
+    /**
+     * 根据 Y 坐标找到对应的行号（鼠标在整行高度范围内均有效，不限于节点文本宽度内）
+     */
+    private int getRowForYPosition(int y) {
+        int rowCount = requestTree.getRowCount();
+        for (int i = 0; i < rowCount; i++) {
+            Rectangle bounds = requestTree.getRowBounds(i);
+            if (bounds != null && y >= bounds.y && y < bounds.y + bounds.height) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void updateHoveredRow(int row) {
+        TreeCellRenderer renderer = requestTree.getCellRenderer();
+        if (renderer instanceof RequestTreeCellRenderer r) {
+            r.setHoveredRow(row);
+            requestTree.repaint();
+        }
+    }
+
+    // ==================== 点击处理 ====================
 
     @Override
     public void mousePressed(MouseEvent e) {
         if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 1) {
+            // 先判断是否点到了 "+" 按钮
+            if (isClickOnAddButton(e)) {
+                handleAddButtonClick(e);
+                return;
+            }
             handleSingleClick(e);
         } else if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 2) {
             handleDoubleClick(e);
         } else if (SwingUtilities.isRightMouseButton(e)) {
             handleRightClick(e);
         }
+    }
+
+    /**
+     * 判断点击是否落在 GROUP 节点右侧的 "+" 按钮区域
+     */
+    private boolean isClickOnAddButton(MouseEvent e) {
+        int row = getRowForYPosition(e.getY());
+        if (row < 0) return false;
+        TreePath path = requestTree.getPathForRow(row);
+        if (path == null) return false;
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+        if (!(node.getUserObject() instanceof Object[] obj) || !GROUP.equals(obj[0])) return false;
+
+        // "+" 号固定在行最右侧 ADD_BUTTON_WIDTH 像素（树宽度 = viewport 宽度）
+        int treeWidth = requestTree.getWidth();
+        int addBtnStart = treeWidth - RequestTreeCellRenderer.ADD_BUTTON_WIDTH;
+        return e.getX() >= addBtnStart;
+    }
+
+    /**
+     * 点击 "+" 按钮：弹出添加请求对话框
+     */
+    private void handleAddButtonClick(MouseEvent e) {
+        int row = getRowForYPosition(e.getY());
+        if (row < 0) return;
+        TreePath path = requestTree.getPathForRow(row);
+        if (path == null) return;
+        DefaultMutableTreeNode groupNode = (DefaultMutableTreeNode) path.getLastPathComponent();
+        // 先选中该节点
+        requestTree.setSelectionPath(path);
+        actions.showAddRequestDialog(groupNode);
     }
 
     /**

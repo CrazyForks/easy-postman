@@ -20,49 +20,94 @@ import java.util.Date;
 
 /**
  * 自定义树节点渲染器，用于美化 JTree 的节点显示
+ * 当鼠标悬浮在 GROUP 节点时，右侧显示 "+" 图标（类似 Postman）
+ * 所有节点 hover 时整行显示背景色高亮
  */
 public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
 
     private static final int ICON_SIZE = 16;
 
+    /** 当前鼠标悬浮的行号，-1 表示无悬浮；由外部（MouseMotionListener）更新 */
+    private int hoveredRow = -1;
+
+    public void setHoveredRow(int row) { this.hoveredRow = row; }
+    public int getHoveredRow() { return hoveredRow; }
+
+    /** "+" 图标区域宽度（像素），用于命中测试：图标16px + 左右各4px = 24px */
+    public static final int ADD_BUTTON_WIDTH = 24;
+
+    /** 当前渲染行是否需要显示 "+" 图标（GROUP 节点 hover 时） */
+    private boolean showAddButton = false;
+
+    /** plus.svg 图标，主题适配，懒加载 */
+    private transient Icon plusIcon = null;
+
+    private Icon getPlusIcon() {
+        if (plusIcon == null) {
+            plusIcon = IconUtil.createThemed("icons/plus.svg", ICON_SIZE, ICON_SIZE);
+        }
+        return plusIcon;
+    }
+
     @Override
     public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
                                                   boolean leaf, int row, boolean hasFocus) {
         super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+
+        showAddButton = false;
+
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
         Object userObject = node.getUserObject();
         if (userObject instanceof Object[] obj) {
             if (RequestCollectionsLeftPanel.GROUP.equals(obj[0])) {
-                Object groupData = obj[1];
-                String groupName = groupData instanceof RequestGroup requestGroup ? requestGroup.getName() : String.valueOf(groupData);
-                // 判断是否为第一层 Collection（父节点是 root）
-                boolean isRootLevel = node.getParent() instanceof DefaultMutableTreeNode parentNode &&
-                        RequestCollectionsLeftPanel.ROOT.equals(String.valueOf(parentNode.getUserObject()));
-                if (isRootLevel) {
-                    // 第一层：Collection 样式，参考 Postman - 使用专属图标 + 加粗字体
-                    setIcon(new FlatSVGIcon("icons/root_group.svg", ICON_SIZE, ICON_SIZE));
-                    int baseFontSize = SettingManager.getUiFontSize();
-                    String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
-                    setText("<html><span style='font-weight:bold;font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
-                            + escapeHtml(groupName) + "</span></html>");
-                } else {
-                    // 子层：Folder 样式（普通文件夹图标）
-                    setIcon(new FlatSVGIcon("icons/group.svg", ICON_SIZE, ICON_SIZE));
-                    setText(groupName);
-                }
+                renderGroupNode(node, obj, row);
             } else if (RequestCollectionsLeftPanel.REQUEST.equals(obj[0])) {
-                HttpRequestItem item = (HttpRequestItem) obj[1];
-                applyRequestRendering(item);
+                applyRequestRendering((HttpRequestItem) obj[1]);
             } else if (RequestCollectionsLeftPanel.SAVED_RESPONSE.equals(obj[0])) {
-                SavedResponse savedResponse = (SavedResponse) obj[1];
-                applySavedResponseRendering(savedResponse);
+                applySavedResponseRendering((SavedResponse) obj[1]);
             }
         }
 
         return this;
     }
 
-    // Extracted to reduce cognitive complexity of the main method
+    private void renderGroupNode(DefaultMutableTreeNode node, Object[] obj, int row) {
+        Object groupData = obj[1];
+        String groupName = groupData instanceof RequestGroup rg ? rg.getName() : String.valueOf(groupData);
+        boolean isRootLevel = node.getParent() instanceof DefaultMutableTreeNode p &&
+                RequestCollectionsLeftPanel.ROOT.equals(String.valueOf(p.getUserObject()));
+        if (isRootLevel) {
+            setIcon(new FlatSVGIcon("icons/root_group.svg", ICON_SIZE, ICON_SIZE));
+            int baseFontSize = SettingManager.getUiFontSize();
+            String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
+            setText("<html><nobr><span style='font-weight:bold;font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
+                    + escapeHtml(groupName) + "</span></nobr></html>");
+        } else {
+            setIcon(new FlatSVGIcon("icons/group.svg", ICON_SIZE, ICON_SIZE));
+            setText(groupName);
+        }
+        if (row == hoveredRow) {
+            showAddButton = true;
+        }
+    }
+
+    /**
+     * 绘制右侧 "+" 图标（GROUP hover 时）。
+     * 整行 hover 背景色由 JTree.paint() 统一绘制，不在此处处理。
+     */
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if (!showAddButton) return;
+
+        Icon icon = getPlusIcon();
+        int w = getWidth();
+        int h = getHeight();
+        int x = w - icon.getIconWidth() - 4;
+        int y = (h - icon.getIconHeight()) / 2;
+        icon.paintIcon(this, g, x, y);
+    }
+
     private void applyRequestRendering(HttpRequestItem item) {
         String method = item.getMethod();
         String name = item.getName();
@@ -76,24 +121,13 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
             method = "SSE";
             methodColor = "#7fbee3";
         } else {
-            // 优化常见方法名的显示
             method = abbreviateMethod(method);
         }
-
         setText(buildStyledText(method, methodColor, name));
     }
 
-    /**
-     * 缩写方法名以节省显示空间
-     * DELETE -> DEL
-     * OPTIONS -> OPT
-     * PATCH -> PAT
-     * TRACE -> TRC
-     */
     private String abbreviateMethod(String method) {
-        if (method == null) {
-            return "";
-        }
+        if (method == null) return "";
         return switch (method.toUpperCase()) {
             case "DELETE" -> "DEL";
             case "OPTIONS" -> "OPT";
@@ -103,75 +137,50 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         };
     }
 
-    // Render saved response node with status code and timestamp
     private void applySavedResponseRendering(SavedResponse savedResponse) {
         setIcon(IconUtil.createThemed("icons/save-response.svg", IconUtil.SIZE_LARGE, IconUtil.SIZE_LARGE));
-
         String name = savedResponse.getName();
         int code = savedResponse.getCode();
         long timestamp = savedResponse.getTimestamp();
-
-        // 格式化时间
         String timeStr = new SimpleDateFormat("MM-dd HH:mm:ss").format(new Date(timestamp));
-
-        // 根据状态码设置颜色
         String statusColor = getStatusColor(code);
-
         setText(buildSavedResponseText(name, code, timeStr, statusColor));
     }
 
-    // Get status code color
     private static String getStatusColor(int code) {
-        if (code >= 200 && code < 300) {
-            return "#28a745"; // 绿色 - 成功
-        } else if (code >= 300 && code < 400) {
-            return "#17a2b8"; // 青色 - 重定向
-        } else if (code >= 400 && code < 500) {
-            return "#ffc107"; // 黄色 - 客户端错误
-        } else if (code >= 500) {
-            return "#dc3545"; // 红色 - 服务器错误
-        }
-        return "#6c757d"; // 灰色 - 其他
+        if (code >= 200 && code < 300) return "#28a745";
+        else if (code >= 300 && code < 400) return "#17a2b8";
+        else if (code >= 400 && code < 500) return "#ffc107";
+        else if (code >= 500) return "#dc3545";
+        return "#6c757d";
     }
 
-    // Build styled text for saved response
     private static String buildSavedResponseText(String name, int code, String timeStr, String statusColor) {
         String safeName = name == null ? "" : escapeHtml(name);
-
         int baseFontSize = SettingManager.getUiFontSize();
         int nameFontSize = Math.max(8, baseFontSize - 4);
         int statusFontSize = Math.max(7, baseFontSize - 5);
         int timeFontSize = Math.max(7, baseFontSize - 6);
-
-        return "<html>" +
-                "<span style='font-size:" + nameFontSize + "px'>" + safeName + "</span> " +
-                "<span style='color:" + statusColor + ";font-weight:bold;font-size:" + statusFontSize + "px'>" + code + "</span> " +
-                "<span style='color:#999999;font-size:" + timeFontSize + "px'>" + timeStr + "</span>" +
-                "</html>";
+        return "<html><nobr>"
+                + "<span style='font-size:" + nameFontSize + "px'>" + safeName + "</span> "
+                + "<span style='color:" + statusColor + ";font-weight:bold;font-size:" + statusFontSize + "px'>" + code + "</span> "
+                + "<span style='color:#999999;font-size:" + timeFontSize + "px'>" + timeStr + "</span>"
+                + "</nobr></html>";
     }
 
-    // Build HTML with escaped content and dynamic font sizes based on user settings
     private static String buildStyledText(String method, String methodColor, String name) {
         String safeMethod = method == null ? "" : escapeHtml(method);
         String safeName = name == null ? "" : escapeHtml(name);
         String color = methodColor == null ? "#000" : methodColor;
-
-        // 获取用户设置的字体大小，并计算相对大小
         int baseFontSize = SettingManager.getUiFontSize();
-        int methodFontSize = Math.max(7, baseFontSize - 5); // 方法名比标准字体小4号，最小8px
-        int nameFontSize = Math.max(8, baseFontSize - 4);   // 请求名比标准字体小3号，最小9px
-
-        // simple concatenation is clearer for this short html fragment
-        return "<html>" +
-                "<span style='color:" + color + ";font-weight:bold;font-size:" + methodFontSize + "px'>" +
-                safeMethod +
-                "</span> " +
-                "<span style='font-size:" + nameFontSize + "px'>" +
-                safeName +
-                "</span></html>";
+        int methodFontSize = Math.max(7, baseFontSize - 5);
+        int nameFontSize = Math.max(8, baseFontSize - 4);
+        return "<html><nobr>"
+                + "<span style='color:" + color + ";font-weight:bold;font-size:" + methodFontSize + "px'>" + safeMethod + "</span> "
+                + "<span style='font-size:" + nameFontSize + "px'>" + safeName + "</span>"
+                + "</nobr></html>";
     }
 
-    // Minimal HTML escape to avoid broken rendering or injection
     private static String escapeHtml(String s) {
         if (s == null) return null;
         StringBuilder out = new StringBuilder(Math.max(16, s.length()));

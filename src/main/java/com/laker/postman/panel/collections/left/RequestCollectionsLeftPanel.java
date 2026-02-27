@@ -77,16 +77,47 @@ public class RequestCollectionsLeftPanel extends SingletonBasePanel {
         String filePath = SystemUtil.getCollectionPathForWorkspace(currentWorkspace);
         // 初始化持久化工具
         persistence = new RequestsPersistence(filePath, rootTreeNode, treeModel);
-        // 创建树组件
+        // 创建树组件，重写 getScrollableTracksViewportWidth 确保树宽度始终铺满 viewport，
+        // 这样鼠标在行的右侧空白区域仍在 JTree 上，mouseMoved 事件能正常触发
         requestTree = new JTree(treeModel) {
             @Override
             public boolean isPathEditable(TreePath path) {
-                // 禁止根节点重命名
                 Object node = path.getLastPathComponent();
                 if (node instanceof DefaultMutableTreeNode treeNode) {
                     return treeNode.getParent() != null;
                 }
                 return false;
+            }
+
+            @Override
+            public boolean getScrollableTracksViewportWidth() {
+                return true;
+            }
+
+            @Override
+            public void paint(Graphics g) {
+                super.paint(g);
+                // 在树正常绘制之后，对 hover 行叠加整行背景高亮
+                // 这样不受 renderer clip 限制，整行宽度都能被覆盖
+                if (getCellRenderer() instanceof RequestTreeCellRenderer r) {
+                    int row = r.getHoveredRow();
+                    if (row >= 0 && row < getRowCount()) {
+                        Rectangle bounds = getRowBounds(row);
+                        if (bounds != null) {
+                            // 判断该行是否已选中，选中行不叠加
+                            TreePath path = getPathForRow(row);
+                            if (path != null && !isPathSelected(path)) {
+                                Graphics2D g2 = (Graphics2D) g.create();
+                                boolean dark = com.formdev.flatlaf.FlatLaf.isLafDark();
+                                // 半透明叠加：亮色主题稍微加深，暗色稍微提亮
+                                g2.setColor(dark ? new Color(255, 255, 255, 20) : new Color(0, 0, 0, 18));
+                                // 整行宽度：从 x=0 到树宽
+                                g2.fillRect(0, bounds.y, getWidth(), bounds.height);
+                                g2.dispose();
+                            }
+                        }
+                    }
+                }
             }
         };
         // 不显示根节点
@@ -98,14 +129,18 @@ public class RequestCollectionsLeftPanel extends SingletonBasePanel {
         requestTree.setToggleClickCount(0);
         // 设置树支持多选（支持批量删除）
         requestTree.getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
+        // FlatLaf wideCellRenderer：让 CellRenderer 宽度铺满整行，使 "+" 号精确贴在右侧
+        requestTree.putClientProperty("FlatLaf.style", "wideCellRenderer: true");
+        // 注册 ToolTipManager，允许动态设置 tooltip（hover "+" 时显示 Add Request）
+        ToolTipManager.sharedInstance().registerComponent(requestTree);
         // 设置树的字体和行高
         requestTree.setCellRenderer(new RequestTreeCellRenderer());
         requestTree.setRowHeight(28);
         JScrollPane treeScrollPane = new JScrollPane(requestTree);
         treeScrollPane.getVerticalScrollBar().setUnitIncrement(16); // 设置滚动条增量
         // 启用拖拽排序
-        requestTree.setDragEnabled(true); // 启用拖拽
-        requestTree.setDropMode(DropMode.ON_OR_INSERT); // 设置拖拽模式为插入
+        requestTree.setDragEnabled(true);
+        requestTree.setDropMode(DropMode.ON_OR_INSERT);
         requestTree.setTransferHandler(new TreeTransferHandler(requestTree, treeModel, this::saveRequestGroups));
         return treeScrollPane;
     }
@@ -118,7 +153,9 @@ public class RequestCollectionsLeftPanel extends SingletonBasePanel {
     @Override
     protected void registerListeners() {
         requestTree.addKeyListener(new RequestTreeKeyboardHandler(requestTree, this));
-        requestTree.addMouseListener(new RequestTreeMouseHandler(requestTree, this));
+        RequestTreeMouseHandler mouseHandler = new RequestTreeMouseHandler(requestTree, this);
+        requestTree.addMouseListener(mouseHandler);
+        requestTree.addMouseMotionListener(mouseHandler);
 
         // 使用 AsyncTaskExecutor 异步加载请求集合
         EasyTaskExecutor.execute(
@@ -382,4 +419,3 @@ public class RequestCollectionsLeftPanel extends SingletonBasePanel {
     }
 
 }
-

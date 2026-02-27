@@ -118,15 +118,9 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
 
         if (isRootLevel) {
             setIcon(new FlatSVGIcon("icons/root_group.svg", ICON_SIZE, ICON_SIZE));
-            if (isHover) {
-                // hover 时用纯文本，JLabel 能自动省略超长文字
-                setText(groupName);
-            } else {
-                int baseFontSize = SettingManager.getUiFontSize();
-                String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
-                setText("<html><nobr><span style='font-size:" + (baseFontSize - 4) + "px;color:" + nameColor + "'>"
-                        + escapeHtml(groupName) + "</span></nobr></html>");
-            }
+            Color nameColor = FlatLaf.isLafDark() ? new Color(0xe2, 0xe8, 0xf0) : new Color(0x1e, 0x29, 0x3b);
+            setForeground(nameColor);
+            setText(groupName);
         } else {
             setIcon(new FlatSVGIcon("icons/group.svg", ICON_SIZE, ICON_SIZE));
             setText(groupName);

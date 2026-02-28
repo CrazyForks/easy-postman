@@ -190,7 +190,8 @@ public class RequestEditPanel extends SingletonBasePanel {
             leftPanel.getPersistence().saveRequestGroups();
         });
 
-        showOrUpdatePreviewTab(groupEditPanel, groupName, null);
+        boolean isRoot = groupNode.getLevel() == 1;
+        showOrUpdatePreviewTab(groupEditPanel, groupName, null, isRoot);
     }
 
     // showOrCreateTab 需适配 "+" Tab（双击时调用，创建固定 tab）
@@ -626,8 +627,9 @@ public class RequestEditPanel extends SingletonBasePanel {
                     Object userObj = node.getUserObject();
                     if (userObj instanceof Object[] arr && GROUP.equals(arr[0]) && arr[1] instanceof RequestGroup group) {
                         setText(group.getName());
-                        // 橙色实心文件夹，模拟Postman分组
-                        setIcon(new FlatSVGIcon("icons/group.svg", 16, 16));
+                        // 根节点（collection）用 collection.svg，子文件夹用 group.svg
+                        String iconName = node.getLevel() == 1 ? "icons/collection.svg" : "icons/group.svg";
+                        setIcon(new FlatSVGIcon(iconName, 16, 16));
                     } else {
                         setText("");
                         setIcon(null);
@@ -694,7 +696,8 @@ public class RequestEditPanel extends SingletonBasePanel {
         if (idx < 0) return;
 
         // 重新创建 Tab 组件以更新标题
-        tabbedPane.setTabComponentAt(idx, new ClosableTabComponent(newTitle, null));
+        boolean isRoot = panel.getGroupNode() != null && panel.getGroupNode().getLevel() == 1;
+        tabbedPane.setTabComponentAt(idx, new ClosableTabComponent(newTitle, null, isRoot));
         tabbedPane.setToolTipTextAt(idx, newTitle);
     }
 
@@ -814,8 +817,9 @@ public class RequestEditPanel extends SingletonBasePanel {
 
         // 添加为新 Tab
         String groupName = group.getName();
+        boolean isRoot = groupNode.getLevel() == 1;
         tabbedPane.addTab(groupName, groupEditPanel);
-        tabbedPane.setTabComponentAt(tabbedPane.getTabCount() - 1, new ClosableTabComponent(groupName, null));
+        tabbedPane.setTabComponentAt(tabbedPane.getTabCount() - 1, new ClosableTabComponent(groupName, null, isRoot));
         tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
 
         // 恢复+Tab
@@ -1023,19 +1027,24 @@ public class RequestEditPanel extends SingletonBasePanel {
         }
     }
 
+    private void showOrUpdatePreviewTab(Component panel, String name, RequestItemProtocolEnum protocol) {
+        showOrUpdatePreviewTab(panel, name, protocol, false);
+    }
+
     /**
      * 显示或更新预览 tab
      *
      * @param panel    要显示的面板
      * @param name     tab 名称
      * @param protocol 协议类型
+     * @param isRoot   是否为根文件夹（collection）
      */
-    private void showOrUpdatePreviewTab(Component panel, String name, RequestItemProtocolEnum protocol) {
+    private void showOrUpdatePreviewTab(Component panel, String name, RequestItemProtocolEnum protocol, boolean isRoot) {
         if (previewTab != null && previewTabIndex >= 0) {
             previewTab = panel;
             tabbedPane.setComponentAt(previewTabIndex, previewTab);
             tabbedPane.setTitleAt(previewTabIndex, name);
-            ClosableTabComponent tabComponent = new ClosableTabComponent(name, protocol);
+            ClosableTabComponent tabComponent = new ClosableTabComponent(name, protocol, isRoot);
             tabComponent.setPreviewMode(true);
             tabbedPane.setTabComponentAt(previewTabIndex, tabComponent);
             tabbedPane.setSelectedIndex(previewTabIndex);
@@ -1048,7 +1057,7 @@ public class RequestEditPanel extends SingletonBasePanel {
             previewTab = panel;
             tabbedPane.addTab(name, previewTab);
             previewTabIndex = tabbedPane.getTabCount() - 1;
-            ClosableTabComponent tabComponent = new ClosableTabComponent(name, protocol);
+            ClosableTabComponent tabComponent = new ClosableTabComponent(name, protocol, isRoot);
             tabComponent.setPreviewMode(true);
             tabbedPane.setTabComponentAt(previewTabIndex, tabComponent);
             tabbedPane.setSelectedIndex(previewTabIndex);

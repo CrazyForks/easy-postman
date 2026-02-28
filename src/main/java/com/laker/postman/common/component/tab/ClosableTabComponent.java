@@ -94,6 +94,10 @@ public class ClosableTabComponent extends JPanel {
     }
 
     public ClosableTabComponent(String title, RequestItemProtocolEnum protocol) {
+        this(title, protocol, false);
+    }
+
+    public ClosableTabComponent(String title, RequestItemProtocolEnum protocol, boolean isRoot) {
         setOpaque(false);
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
@@ -134,8 +138,9 @@ public class ClosableTabComponent extends JPanel {
         if (protocol != null) {
             label.setIcon(protocol.getIcon());
         } else {
-            // 分组编辑tab
-            label.setIcon(new FlatSVGIcon("icons/group.svg", 16, 16));
+            // 分组编辑tab：根文件夹用 collection，子文件夹用 group
+            String iconName = isRoot ? "icons/collection.svg" : "icons/group.svg";
+            label.setIcon(new FlatSVGIcon(iconName, 18, 18));
         }
         label.setBorder(BorderFactory.createEmptyBorder(0, LABEL_HORIZONTAL_PADDING, 0, closeButtonSpace + CLOSE_TEXT_SPACING)); // 右侧预留关闭按钮空间
         label.setHorizontalAlignment(SwingConstants.LEFT); // 改为左对齐，避免文本居中与按钮重叠

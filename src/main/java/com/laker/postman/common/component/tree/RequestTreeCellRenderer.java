@@ -25,7 +25,7 @@ import java.util.Date;
  */
 public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
 
-    private static final int ICON_SIZE = 16;
+    private static final int ICON_SIZE = 18;
 
     /**
      * 当前鼠标悬浮的行号，-1 表示无悬浮；由外部（MouseMotionListener）更新

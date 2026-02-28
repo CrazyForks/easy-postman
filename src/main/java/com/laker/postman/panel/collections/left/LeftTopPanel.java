@@ -5,11 +5,11 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.laker.postman.common.SingletonBasePanel;
 import com.laker.postman.common.SingletonFactory;
 import com.laker.postman.common.component.SearchTextField;
+import com.laker.postman.common.component.button.PlusButton;
 import com.laker.postman.common.component.dialog.CurlImportDialog;
 import com.laker.postman.frame.MainFrame;
 import com.laker.postman.model.*;
@@ -58,20 +58,18 @@ public class LeftTopPanel extends SingletonBasePanel {
     private static File lastSelectedDirectory = null;
 
     private SearchTextField searchField;
-    /** + 按钮（新建集合 / 各种导入） */
-    private JButton plusBtn;
+    /**
+     * + 按钮（新建集合 / 各种导入）
+     */
+    private PlusButton plusBtn;
 
     @Override
     protected void initUI() {
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        plusBtn = new JButton();
-        plusBtn.setIcon(IconUtil.createThemed("icons/plus.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        plusBtn = new PlusButton();
         plusBtn.setToolTipText("New / Import");
-        plusBtn.setFocusable(false);
-        plusBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        plusBtn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         plusBtn.addActionListener(e -> showPlusMenu());
 
         searchField = new SearchTextField();
@@ -258,7 +256,6 @@ public class LeftTopPanel extends SingletonBasePanel {
             }
         });
     }
-
 
 
     // 导入请求集合JSON文件
@@ -598,8 +595,6 @@ public class LeftTopPanel extends SingletonBasePanel {
         collectionPanel.locateAndSelectRequest(item.getId());
         return true;
     }
-
-
 
 
     // 递归过滤节点，支持大小写敏感和整词匹配

@@ -4,11 +4,11 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
-import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.common.SingletonBasePanel;
 import com.laker.postman.common.SingletonFactory;
 import com.laker.postman.common.component.SearchTextField;
 import com.laker.postman.common.component.button.EditButton;
+import com.laker.postman.common.component.button.PlusButton;
 import com.laker.postman.common.component.button.SaveButton;
 import com.laker.postman.common.component.combobox.EnvironmentComboBox;
 import com.laker.postman.common.component.list.EnvironmentListCellRenderer;
@@ -56,7 +56,7 @@ public class EnvironmentPanel extends SingletonBasePanel {
     private JList<EnvironmentItem> environmentList;
     private DefaultListModel<EnvironmentItem> environmentListModel;
     private SearchTextField searchField;
-    private JButton plusBtn;
+    private PlusButton plusBtn;
     private String originalVariablesSnapshot; // 原始变量快照，直接用json字符串
     private boolean isLoadingData = false; // 用于控制是否正在加载数据，防止自动保存
     private SearchTextField tableSearchField; // 表格搜索框
@@ -221,12 +221,8 @@ public class EnvironmentPanel extends SingletonBasePanel {
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
         topPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        plusBtn = new JButton();
-        plusBtn.setIcon(IconUtil.createThemed("icons/plus.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        plusBtn = new PlusButton();
         plusBtn.setToolTipText("New / Import");
-        plusBtn.setFocusable(false);
-        plusBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        plusBtn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
         plusBtn.addActionListener(e -> showPlusMenu());
 
         searchField = new SearchTextField();

@@ -14,6 +14,7 @@ public final class MessageKeys {
     public static final String MENU_FILE_LOG = "menu.file.log";
     public static final String MENU_FILE_EXIT = "menu.file.exit";
     public static final String MENU_FILE_EXPORT_COLLECTIONS = "menu.file.export_collections";
+    public static final String MENU_FILE_EXPORT_ENVIRONMENTS = "menu.file.export_environments";
     public static final String MENU_LANGUAGE = "menu.language";
     public static final String MENU_THEME = "menu.theme";
     public static final String MENU_THEME_LIGHT = "menu.theme.light";
@@ -335,6 +336,7 @@ public final class MessageKeys {
     public static final String ENV_MENU_IMPORT_EASY = "env.menu.import_easy";
     public static final String ENV_MENU_IMPORT_POSTMAN = "env.menu.import_postman";
     public static final String ENV_MENU_IMPORT_INTELLIJ = "env.menu.import_intellij";
+    public static final String ENV_MENU_EXPORT = "env.menu.export";
     public static final String ENV_DIALOG_SAVE_CHANGES_TITLE = "env.dialog.save_changes.title";
     public static final String ENV_DIALOG_SAVE_SUCCESS = "env.dialog.save.success";
     public static final String ENV_DIALOG_EXPORT_TITLE = "env.dialog.export.title";

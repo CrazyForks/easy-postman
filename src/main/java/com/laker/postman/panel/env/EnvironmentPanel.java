@@ -4,12 +4,11 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONUtil;
+import com.formdev.flatlaf.FlatClientProperties;
 import com.laker.postman.common.SingletonBasePanel;
 import com.laker.postman.common.SingletonFactory;
 import com.laker.postman.common.component.SearchTextField;
 import com.laker.postman.common.component.button.EditButton;
-import com.laker.postman.common.component.button.ExportButton;
-import com.laker.postman.common.component.button.ImportButton;
 import com.laker.postman.common.component.button.SaveButton;
 import com.laker.postman.common.component.combobox.EnvironmentComboBox;
 import com.laker.postman.common.component.list.EnvironmentListCellRenderer;
@@ -57,7 +56,7 @@ public class EnvironmentPanel extends SingletonBasePanel {
     private JList<EnvironmentItem> environmentList;
     private DefaultListModel<EnvironmentItem> environmentListModel;
     private SearchTextField searchField;
-    private ImportButton importBtn;
+    private JButton plusBtn;
     private String originalVariablesSnapshot; // 原始变量快照，直接用json字符串
     private boolean isLoadingData = false; // 用于控制是否正在加载数据，防止自动保存
     private SearchTextField tableSearchField; // 表格搜索框
@@ -218,39 +217,54 @@ public class EnvironmentPanel extends SingletonBasePanel {
     }
 
     private JPanel getSearchAndImportPanel() {
-        JPanel importExportPanel = new JPanel();
-        importExportPanel.setLayout(new BoxLayout(importExportPanel, BoxLayout.X_AXIS));
-        importExportPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        importBtn = new ImportButton();
-        importBtn.addActionListener(e -> showImportMenu());
-
-        ExportButton exportBtn = new ExportButton();
-        exportBtn.addActionListener(e -> exportEnvironments());
+        plusBtn = new JButton();
+        plusBtn.setIcon(IconUtil.createThemed("icons/plus.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        plusBtn.setToolTipText("New / Import");
+        plusBtn.setFocusable(false);
+        plusBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        plusBtn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+        plusBtn.addActionListener(e -> showPlusMenu());
 
         searchField = new SearchTextField();
 
-        importExportPanel.add(importBtn);
-        importExportPanel.add(exportBtn);
-        importExportPanel.add(searchField);
-        return importExportPanel;
+        topPanel.add(plusBtn);
+        topPanel.add(Box.createHorizontalStrut(4));
+        topPanel.add(searchField);
+        return topPanel;
     }
 
-    private void showImportMenu() {
-        JPopupMenu importMenu = new JPopupMenu();
+    private void showPlusMenu() {
+        JPopupMenu menu = new JPopupMenu();
+
+        // ── 新建环境
+        JMenuItem newEnvItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.ENV_BUTTON_ADD),
+                IconUtil.create("icons/plus.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        newEnvItem.addActionListener(e -> addEnvironment());
+        menu.add(newEnvItem);
+
+        menu.addSeparator();
+
+        // ── 导入
         JMenuItem importEasyToolsItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.ENV_MENU_IMPORT_EASY),
                 IconUtil.create("icons/easy.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
         importEasyToolsItem.addActionListener(e -> importEnvironments());
+        menu.add(importEasyToolsItem);
+
         JMenuItem importPostmanItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.ENV_MENU_IMPORT_POSTMAN),
-                IconUtil.create("icons/postman.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM)); // 彩色
+                IconUtil.create("icons/postman.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
         importPostmanItem.addActionListener(e -> importPostmanEnvironments());
+        menu.add(importPostmanItem);
+
         JMenuItem importIntelliJItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.ENV_MENU_IMPORT_INTELLIJ),
                 IconUtil.create("icons/idea-http.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
         importIntelliJItem.addActionListener(e -> importIntelliJEnvironments());
-        importMenu.add(importEasyToolsItem);
-        importMenu.add(importPostmanItem);
-        importMenu.add(importIntelliJItem);
-        importMenu.show(importBtn, 0, importBtn.getHeight());
+        menu.add(importIntelliJItem);
+
+        menu.show(plusBtn, 0, plusBtn.getHeight());
     }
 
     @Override
@@ -590,7 +604,7 @@ public class EnvironmentPanel extends SingletonBasePanel {
     /**
      * 导出所有环境变量为JSON文件
      */
-    private void exportEnvironments() {
+    public void exportEnvironments() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle(I18nUtil.getMessage(MessageKeys.ENV_DIALOG_EXPORT_TITLE));
         fileChooser.setSelectedFile(new File(EXPORT_FILE_NAME));

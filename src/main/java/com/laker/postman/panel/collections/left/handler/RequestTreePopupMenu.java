@@ -52,7 +52,7 @@ public class RequestTreePopupMenu {
 
         // 请求节点菜单
         if (userObj instanceof Object[] && REQUEST.equals(((Object[]) userObj)[0])) {
-            addRequestMenuItems(menu, isMultipleSelection);
+            addRequestMenuItems(menu, selectedNode, isMultipleSelection);
         }
 
         // 保存的响应节点菜单 - 只显示重命名和删除，不显示粘贴等其他选项
@@ -141,7 +141,7 @@ public class RequestTreePopupMenu {
     /**
      * 添加请求相关菜单项
      */
-    private void addRequestMenuItems(JPopupMenu menu, boolean isMultipleSelection) {
+    private void addRequestMenuItems(JPopupMenu menu, DefaultMutableTreeNode selectedNode, boolean isMultipleSelection) {
         // 添加到功能测试
         JMenuItem addToFunctional = createMenuItem(
                 MessageKeys.COLLECTIONS_MENU_ADD_TO_FUNCTIONAL,
@@ -150,6 +150,18 @@ public class RequestTreePopupMenu {
         );
         menu.add(addToFunctional);
         menu.addSeparator();
+
+        // 新增请求（在同级分组下）
+        DefaultMutableTreeNode parentGroup = (DefaultMutableTreeNode) selectedNode.getParent();
+        if (parentGroup != null) {
+            JMenuItem addRequest = createMenuItem(
+                    MessageKeys.COLLECTIONS_MENU_ADD_REQUEST,
+                    "icons/request.svg",
+                    e -> actions.showAddRequestDialog(parentGroup)
+            );
+            addRequest.setEnabled(!isMultipleSelection);
+            menu.add(addRequest);
+        }
 
         // 复制（创建副本）
         JMenuItem duplicate = createMenuItem(

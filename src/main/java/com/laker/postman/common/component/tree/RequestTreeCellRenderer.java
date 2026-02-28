@@ -127,10 +127,8 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
             // hover 时用纯文本，JLabel 能自动省略超长文字
             setText(groupName);
         } else {
-            int baseFontSize = SettingManager.getUiFontSize();
-            int nameFontSize = Math.max(9, baseFontSize - 3);
             String nameColor = FlatLaf.isLafDark() ? "#e2e8f0" : "#1e293b";
-            setText("<html><nobr><span style='font-size:" + nameFontSize + "px;color:" + nameColor + "'>"
+            setText("<html><nobr><span color:" + nameColor + "'>"
                     + escapeHtml(groupName) + "</span></nobr></html>");
         }
 

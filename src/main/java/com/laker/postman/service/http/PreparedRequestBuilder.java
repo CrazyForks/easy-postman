@@ -9,9 +9,8 @@ import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import static com.laker.postman.common.constants.HttpConstants.HEADER_AUTHORIZATION;
 import static com.laker.postman.panel.collections.right.request.sub.AuthTabPanel.AUTH_TYPE_BASIC;
@@ -95,8 +94,8 @@ public class PreparedRequestBuilder {
         req.body = effectiveItem.getBody();
         req.bodyType = effectiveItem.getBodyType();
 
-        // 构建 URL（拼接参数但暂不替换变量）
-        req.url = buildUrlWithParams(effectiveItem);
+        // 构建 URL（拼接参数但暂不替换变量；编码在此处理，发请求前只需替换变量）
+        req.url = buildRawUrlWithParams(effectiveItem);
 
         // 判断是否为 multipart 请求
         req.isMultipart = checkIsMultipart(effectiveItem.getFormDataList());
@@ -132,8 +131,8 @@ public class PreparedRequestBuilder {
             // 这样可以避免重复参数的问题（例如：URL 中有 {{a}}=3，paramsList 中也有 {{a}}=3）
             req.url = VariableResolver.resolve(req.url);
             replaceVariablesInParamsList(req.paramsList);
-            // 此时 URL 和 paramsList 中的变量都已替换，buildUrlWithParams 可以正确检测重复
-            rebuildUrlWithParams(req);
+            // 变量替换完成后，用 buildEncodedUrl 一次性完成去重 + URL 编码，生成最终可发送的 URL
+            req.url = HttpRequestUtil.buildEncodedUrl(req.url, req.paramsList);
 
             // 替换Body中的变量
             req.body = VariableResolver.resolve(req.body);
@@ -144,19 +143,33 @@ public class PreparedRequestBuilder {
     }
 
     /**
-     * 构建包含参数的 URL（暂不替换变量）
+     * 构建包含参数的原始 URL（暂不替换变量，暂不编码）。
+     *
+     * <p>此时变量尚未替换（如 {{baseUrl}}），所以不能做 URL 编码，
+     * 编码推迟到 {@link #replaceVariablesAfterPreScript} 中变量替换完成后，
+     * 由 {@link HttpRequestUtil#buildEncodedUrl} 统一完成去重 + 编码。
      */
-    private static String buildUrlWithParams(HttpRequestItem item) {
-        Map<String, String> params = new LinkedHashMap<>();
-        if (item.getParamsList() != null) {
-            for (HttpParam param : item.getParamsList()) {
-                if (param.isEnabled()) {
-                    params.put(param.getKey(), param.getValue());
-                }
-            }
+    private static String buildRawUrlWithParams(HttpRequestItem item) {
+        String url = item.getUrl();
+        if (item.getParamsList() == null || item.getParamsList().isEmpty()) {
+            return url;
         }
-        String urlString = HttpRequestUtil.buildUrlWithParams(item.getUrl(), params);
-        return HttpRequestUtil.encodeUrlParams(urlString);
+        // 仅追加 paramsList 中不与 URL 已有 key 重复的参数（不编码，保留 {{变量}} 原样）
+        boolean hasQuery = url != null && url.contains("?");
+        Set<String> existingKeys = url != null
+                ? HttpRequestUtil.extractUrlParamKeys(url, hasQuery)
+                : java.util.Collections.emptySet();
+        StringBuilder sb = new StringBuilder(url != null ? url : "");
+        for (HttpParam param : item.getParamsList()) {
+            if (!param.isEnabled()) continue;
+            String key = param.getKey();
+            if (key == null || key.isEmpty()) continue;
+            if (existingKeys.contains(key)) continue;
+            sb.append(hasQuery ? "&" : "?");
+            hasQuery = true;
+            sb.append(key).append("=").append(param.getValue() != null ? param.getValue() : "");
+        }
+        return sb.toString();
     }
 
     /**
@@ -266,26 +279,6 @@ public class PreparedRequestBuilder {
     }
 
 
-    /**
-     * 重新构建 URL，包含脚本中动态添加的 params
-     * buildUrlWithParams 会自动避免重复的 key
-     */
-    private static void rebuildUrlWithParams(PreparedRequest req) {
-        if (req.paramsList == null || req.paramsList.isEmpty()) return;
-
-        // 提取所有启用的 params 到 Map（脚本可能添加了新的 params）
-        Map<String, String> params = new LinkedHashMap<>();
-        for (HttpParam param : req.paramsList) {
-            if (param.isEnabled()) {
-                params.put(param.getKey(), param.getValue());
-            }
-        }
-
-        // 重新构建 URL（buildUrlWithParams 会自动避免重复的 key）
-        if (!params.isEmpty()) {
-            req.url = HttpRequestUtil.buildUrlWithParams(req.url, params);
-        }
-    }
 
     private static void replaceVariablesInHeadersList(List<HttpHeader> list) {
         if (list == null) return;

@@ -54,6 +54,18 @@ public class HttpUtil {
         return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
     }
 
+    /**
+     * 对 URL 参数进行解码（%XX -> 字符），安全处理非法编码
+     */
+    public static String decodeURIComponent(String s) {
+        if (s == null || !s.contains("%")) return s;
+        try {
+            return java.net.URLDecoder.decode(s, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return s; // 解码失败时原样返回
+        }
+    }
+
 
     // 判断是否为SSE请求
     public static boolean isSSERequest(PreparedRequest req) {
@@ -175,8 +187,11 @@ public class HttpUtil {
             }
 
             // 只要key不为空，就添加参数（value可以为空）
+            // 对 key/value 做 URL decode，使 Params 面板显示可读的原始值（如 %20 -> 空格）
             if (CharSequenceUtil.isNotBlank(k)) {
-                urlParams.add(new HttpParam(true, k.trim(), v));
+                String decodedKey = decodeURIComponent(k.trim());
+                String decodedValue = decodeURIComponent(v);
+                urlParams.add(new HttpParam(true, decodedKey, decodedValue));
             }
 
             if (amp == -1) break;
@@ -235,13 +250,14 @@ public class HttpUtil {
                     urlBuilder.append("&");
                 }
 
-                // 对参数名进行URL编码
-                urlBuilder.append(encodeURIComponent(param.getKey()));
+                // 不做 URL 编码，原样拼接，保持 UI 展示的可读性
+                // URL 编码只在真正发出请求时（PreparedRequestBuilder）才做
+                urlBuilder.append(param.getKey());
 
                 // 如果value不为空，才添加=和value
                 if (CharSequenceUtil.isNotBlank(param.getValue())) {
                     urlBuilder.append("=");
-                    urlBuilder.append(encodeURIComponent(param.getValue()));
+                    urlBuilder.append(param.getValue());
                 }
                 // 如果value为空，只添加key，不添加=
             }

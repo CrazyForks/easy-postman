@@ -711,21 +711,12 @@ public class RequestEditSubPanel extends JPanel {
                     responsePanel.hideLoadingOverlay();
 
                     if (validationError.contains("WebSocket")) {
-                        JOptionPane.showMessageDialog(RequestEditSubPanel.this,
-                                validationError,
-                                "Invalid URL Protocol", JOptionPane.WARNING_MESSAGE);
+                        NotificationUtil.showWarning(validationError);
                     } else if (validationError.contains("prescript")) {
-                        String errorTitle = I18nUtil.getMessage(MessageKeys.SCRIPT_PRESCRIPT_ERROR_TITLE);
-                        JOptionPane.showMessageDialog(RequestEditSubPanel.this,
-                                validationError,
-                                errorTitle,
-                                JOptionPane.ERROR_MESSAGE);
+                        NotificationUtil.showError(validationError);
                     } else {
                         // 通用错误处理 - 确保用户能看到所有错误
-                        JOptionPane.showMessageDialog(RequestEditSubPanel.this,
-                                validationError,
-                                "Request Error",
-                                JOptionPane.ERROR_MESSAGE);
+                        NotificationUtil.showError(validationError);
                     }
                     return;
                 }

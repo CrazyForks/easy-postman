@@ -278,8 +278,6 @@ public class PreparedRequestBuilder {
         return authHeader;
     }
 
-
-
     private static void replaceVariablesInHeadersList(List<HttpHeader> list) {
         if (list == null) return;
         for (HttpHeader item : list) {

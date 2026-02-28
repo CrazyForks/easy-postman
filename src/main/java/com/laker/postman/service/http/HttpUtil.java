@@ -6,6 +6,7 @@ import com.laker.postman.model.HttpHeader;
 import com.laker.postman.model.HttpParam;
 import com.laker.postman.model.HttpRequestItem;
 import com.laker.postman.model.PreparedRequest;
+import com.laker.postman.service.EnvironmentService;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,6 +15,8 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @UtilityClass
@@ -140,6 +143,18 @@ public class HttpUtil {
             JOptionPane.showMessageDialog(null, "请选择请求方法");
             return false;
         }
+
+        // 检查 URL 中是否还有未被解析的变量占位符（如 {{baseUrl}}）
+        List<String> unresolved = findUnresolvedVariables(req.url);
+        if (!unresolved.isEmpty()) {
+            String activeEnvName = EnvironmentService.getActiveEnvironment() != null
+                    ? EnvironmentService.getActiveEnvironment().getName()
+                    : "（无激活环境）";
+            log.warn("URL 中存在未解析的变量占位符，将无法发送请求。未解析变量={}, 当前激活环境=[{}], URL={}",
+                    unresolved, activeEnvName, req.url);
+            return false;
+        }
+
         if (item.getProtocol().isHttpProtocol()
                 && req.body != null
                 && "GET".equalsIgnoreCase(req.method)
@@ -153,6 +168,19 @@ public class HttpUtil {
             return confirm == JOptionPane.YES_OPTION;
         }
         return true;
+    }
+
+    /**
+     * 找出字符串中所有未被解析的 {{varName}} 占位符名称
+     */
+    public static List<String> findUnresolvedVariables(String text) {
+        List<String> result = new ArrayList<>();
+        if (text == null || text.isEmpty()) return result;
+        Matcher matcher = Pattern.compile("\\{\\{(.+?)}}").matcher(text);
+        while (matcher.find()) {
+            result.add(matcher.group(1));
+        }
+        return result;
     }
 
 

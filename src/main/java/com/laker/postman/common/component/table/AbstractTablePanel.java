@@ -65,6 +65,7 @@ public abstract class AbstractTablePanel<T> extends JPanel {
     protected int hoveredRow = -1;
 
     private static final String ACTION_DELETE_ROW = "deleteRow";
+    private static final String ACTION_ENTER_NAV  = "enterNav";
 
     // ========== 构造函数 ==========
 
@@ -247,36 +248,50 @@ public abstract class AbstractTablePanel<T> extends JPanel {
     }
 
     /**
-     * 单击即进入编辑模式
+     * 单击即进入编辑模式，同时处理悬停行的 mouseExited 清除。
+     * 两个逻辑合并为一个 MouseAdapter，减少监听器对象数量。
      */
     private void setupSingleClickEditing() {
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (!editable || !SwingUtilities.isLeftMouseButton(e)) return;
-                int row = table.rowAtPoint(e.getPoint());
-                int col = table.columnAtPoint(e.getPoint());
-                if (row < 0 || col < 0) return;
-                // 只对文本类可编辑列触发，跳过 checkbox 和 delete 列
-                if (col == getEnabledColumnIndex() || col == getDeleteColumnIndex()) return;
-                if (!table.isCellEditable(row, col)) return;
-                // 延迟一帧，确保选中动作先完成
-                SwingUtilities.invokeLater(() -> {
-                    if (!table.isEditing() || table.getEditingRow() != row || table.getEditingColumn() != col) {
-                        table.editCellAt(row, col);
-                        Component ed = table.getEditorComponent();
-                        if (ed != null) {
-                            ed.requestFocusInWindow();
-                            if (ed instanceof JTextField tf) tf.selectAll();
-                        }
-                    }
-                });
+                if (editable && SwingUtilities.isLeftMouseButton(e)) {
+                    triggerSingleClickEdit(e);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (hoveredRow != -1) {
+                    hoveredRow = -1;
+                    table.repaint();
+                }
             }
         });
     }
 
+    /** 鼠标单击时触发单元格编辑（延迟一帧确保选中先完成） */
+    private void triggerSingleClickEdit(MouseEvent e) {
+        int row = table.rowAtPoint(e.getPoint());
+        int col = table.columnAtPoint(e.getPoint());
+        if (row < 0 || col < 0) return;
+        if (col == getEnabledColumnIndex() || col == getDeleteColumnIndex()) return;
+        if (!table.isCellEditable(row, col)) return;
+        SwingUtilities.invokeLater(() -> {
+            if (!table.isEditing() || table.getEditingRow() != row || table.getEditingColumn() != col) {
+                table.editCellAt(row, col);
+                Component ed = table.getEditorComponent();
+                if (ed != null) {
+                    ed.requestFocusInWindow();
+                    if (ed instanceof JTextField tf) tf.selectAll();
+                }
+            }
+        });
+    }
+
+
     /**
-     * 悬停行高亮：鼠标进入/移动时记录当前行，离开时清除
+     * 悬停行高亮：鼠标移动时记录当前行索引
      */
     private void setupRowHoverHighlight() {
         table.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
@@ -285,15 +300,6 @@ public abstract class AbstractTablePanel<T> extends JPanel {
                 int row = table.rowAtPoint(e.getPoint());
                 if (row != hoveredRow) {
                     hoveredRow = row;
-                    table.repaint();
-                }
-            }
-        });
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                if (hoveredRow != -1) {
-                    hoveredRow = -1;
                     table.repaint();
                 }
             }
@@ -330,73 +336,58 @@ public abstract class AbstractTablePanel<T> extends JPanel {
         InputMap inputMap = table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
         ActionMap actionMap = table.getActionMap();
 
-        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "enterNav");
-        actionMap.put("enterNav", new AbstractAction() {
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), ACTION_ENTER_NAV);
+        actionMap.put(ACTION_ENTER_NAV, new AbstractAction() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 if (!editable) return;
 
-                int row = table.getEditingRow();
-                int col = table.getEditingColumn();
-                if (row < 0 || col < 0) {
-                    row = table.getSelectedRow();
-                    col = table.getSelectedColumn();
-                }
+                int row = table.isEditing() ? table.getEditingRow()    : table.getSelectedRow();
+                int col = table.isEditing() ? table.getEditingColumn() : table.getSelectedColumn();
                 if (row < 0) return;
 
-                // 停止当前编辑
                 if (table.isEditing()) {
                     table.getCellEditor().stopCellEditing();
                 }
 
                 if (col == getFirstEditableColumnIndex()) {
-                    // Key 列 → 跳到 Value 列
-                    int valueCol = getLastEditableColumnIndex();
-                    if (table.isCellEditable(row, valueCol)) {
-                        table.changeSelection(row, valueCol, false, false);
-                        table.editCellAt(row, valueCol);
-                        Component ed = table.getEditorComponent();
-                        if (ed != null) {
-                            ed.requestFocusInWindow();
-                            if (ed instanceof JTextField tf) tf.selectAll();
-                        }
-                    }
+                    enterFromKeyColumn(row);
                 } else {
-                    // Value 列 → 跳到下一行 Key 列
-                    int nextRow = row + 1;
-                    if (nextRow >= table.getRowCount()) {
-                        // 已在最后一行，由 autoAppend 负责追加，稍后选中
-                        SwingUtilities.invokeLater(() -> {
-                            int last = table.getRowCount() - 1;
-                            if (last >= 0) {
-                                table.changeSelection(last, getFirstEditableColumnIndex(), false, false);
-                                table.editCellAt(last, getFirstEditableColumnIndex());
-                                Component ed = table.getEditorComponent();
-                                if (ed != null) {
-                                    ed.requestFocusInWindow();
-                                    if (ed instanceof JTextField tf) tf.selectAll();
-                                }
-                            }
-                        });
-                    } else {
-                        int keyCol = getFirstEditableColumnIndex();
-                        // 找到下一个可编辑的 Key 列（跳过默认 header 行）
-                        while (nextRow < table.getRowCount() && !table.isCellEditable(nextRow, keyCol)) {
-                            nextRow++;
-                        }
-                        if (nextRow < table.getRowCount()) {
-                            table.changeSelection(nextRow, keyCol, false, false);
-                            table.editCellAt(nextRow, keyCol);
-                            Component ed = table.getEditorComponent();
-                            if (ed != null) {
-                                ed.requestFocusInWindow();
-                                if (ed instanceof JTextField tf) tf.selectAll();
-                            }
-                        }
-                    }
+                    enterFromValueColumn(row);
                 }
             }
         });
+    }
+
+    /** Enter 在 Key 列：跳到同行 Value 列 */
+    private void enterFromKeyColumn(int row) {
+        int valueCol = getLastEditableColumnIndex();
+        if (table.isCellEditable(row, valueCol)) {
+            startEditAt(row, valueCol);
+        }
+    }
+
+    /** Enter 在 Value 列：跳到下一个可编辑 Key 行 */
+    private void enterFromValueColumn(int row) {
+        int keyCol  = getFirstEditableColumnIndex();
+        int nextRow = row + 1;
+
+        if (nextRow >= table.getRowCount()) {
+            // 最后一行：等 autoAppend 追加后跳入
+            SwingUtilities.invokeLater(() -> {
+                int last = table.getRowCount() - 1;
+                if (last >= 0) startEditAt(last, keyCol);
+            });
+            return;
+        }
+
+        // 跳过不可编辑的 Key 行（如默认 header 行）
+        while (nextRow < table.getRowCount() && !table.isCellEditable(nextRow, keyCol)) {
+            nextRow++;
+        }
+        if (nextRow < table.getRowCount()) {
+            startEditAt(nextRow, keyCol);
+        }
     }
 
     /**
@@ -487,7 +478,10 @@ public abstract class AbstractTablePanel<T> extends JPanel {
         } else {
             try {
                 SwingUtilities.invokeAndWait(this::clearInternal);
-            } catch (Exception e) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // 恢复中断状态
+                log.warn("Interrupted while clearing table", e);
+            } catch (java.lang.reflect.InvocationTargetException e) {
                 log.error("Error clearing table", e);
             }
         }
@@ -574,14 +568,11 @@ public abstract class AbstractTablePanel<T> extends JPanel {
             // Fill in the provided values
             int valueIndex = 0;
             for (int i = 0; i < columns.length; i++) {
-                if (i == getEnabledColumnIndex()) {
-                    // Skip enabled column, already set to true
-                } else if (i == getDeleteColumnIndex()) {
+                if (i == getDeleteColumnIndex()) {
                     row[i] = ""; // Delete column is always empty
-                } else if (valueIndex < values.length) {
-                    row[i] = values[valueIndex++];
-                } else {
-                    row[i] = "";
+                } else if (i != getEnabledColumnIndex()) {
+                    // enabled column already set to true; fill everything else
+                    row[i] = (valueIndex < values.length) ? values[valueIndex++] : "";
                 }
             }
             tableModel.addRow(row);
@@ -618,8 +609,8 @@ public abstract class AbstractTablePanel<T> extends JPanel {
                     return;
                 }
 
-                // Check if this row can be deleted (子类可以重写 canDeleteRow 来添加额外的检查)
-                if (!canDeleteRow(modelRow)) {
+                // Check if this row can be deleted (子类可以重写 isDeletableRow 来添加额外的检查)
+                if (!isDeletableRow(modelRow)) {
                     return;
                 }
 
@@ -631,15 +622,15 @@ public abstract class AbstractTablePanel<T> extends JPanel {
     }
 
     /**
-     * 检查指定行是否可以删除
-     * 子类可以重写此方法来添加额外的删除检查逻辑
+     * 检查指定行是否可以删除。子类可以重写此方法来添加额外的检查逻辑。
      *
      * @param modelRow 模型行索引
      * @return true 如果可以删除
      */
-    protected boolean canDeleteRow(int modelRow) {
+    protected boolean isDeletableRow(int modelRow) {
         return true;
     }
+
 
     /**
      * 添加右键菜单监听器
@@ -706,52 +697,41 @@ public abstract class AbstractTablePanel<T> extends JPanel {
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (!editable) {
-                    return;
-                }
-
-                // Only react to left mouse button clicks for delete action
-                if (!SwingUtilities.isLeftMouseButton(e)) {
-                    return;
-                }
-
-                int column = table.columnAtPoint(e.getPoint());
-                int row = table.rowAtPoint(e.getPoint());
-
-                if (column == getDeleteColumnIndex() && row >= 0) {
-                    // Convert view row to model row
-                    int modelRow = row;
-                    if (table.getRowSorter() != null) {
-                        modelRow = table.getRowSorter().convertRowIndexToModel(row);
-                    }
-
-                    // Check if row is valid
-                    if (modelRow < 0 || modelRow >= tableModel.getRowCount()) {
-                        return;
-                    }
-
-                    // Prevent deleting the last row (keep at least one empty row like Postman)
-                    int rowCount = tableModel.getRowCount();
-                    if (modelRow == rowCount - 1 && rowCount == 1) {
-                        return;
-                    }
-
-                    // Check if this row can be deleted
-                    if (!canDeleteRow(modelRow)) {
-                        return;
-                    }
-
-                    // Stop cell editing before deleting
-                    stopCellEditing();
-
-                    // Delete the row
-                    tableModel.removeRow(modelRow);
-
-                    // Ensure there's always an empty row at the end
-                    ensureEmptyLastRow();
+                if (editable && SwingUtilities.isLeftMouseButton(e)) {
+                    handleDeleteButtonClick(e);
                 }
             }
         });
+    }
+
+    /** 处理删除列的点击事件 */
+    private void handleDeleteButtonClick(MouseEvent e) {
+        int column = table.columnAtPoint(e.getPoint());
+        int row    = table.rowAtPoint(e.getPoint());
+
+        if (column != getDeleteColumnIndex() || row < 0) {
+            return;
+        }
+
+        int modelRow = (table.getRowSorter() != null)
+                ? table.getRowSorter().convertRowIndexToModel(row) : row;
+
+        if (modelRow < 0 || modelRow >= tableModel.getRowCount()) {
+            return;
+        }
+
+        int rowCount = tableModel.getRowCount();
+        if (modelRow == rowCount - 1 && rowCount == 1) {
+            return; // 保留最后一行（始终保持一个空行）
+        }
+
+        if (!isDeletableRow(modelRow)) {
+            return;
+        }
+
+        stopCellEditing();
+        tableModel.removeRow(modelRow);
+        ensureEmptyLastRow();
     }
 
     /**
@@ -806,7 +786,7 @@ public abstract class AbstractTablePanel<T> extends JPanel {
      */
     protected boolean getBooleanValue(int row, int col) {
         Object obj = tableModel.getValueAt(row, col);
-        return obj instanceof Boolean ? (Boolean) obj : true;
+        return !(obj instanceof Boolean b) || b;
     }
 
     /**
@@ -885,18 +865,10 @@ public abstract class AbstractTablePanel<T> extends JPanel {
             if (modelRow >= 0 && modelRow < tableModel.getRowCount()) {
                 int rowCount = tableModel.getRowCount();
                 boolean isLastRow = (modelRow == rowCount - 1);
-
-                // Use abstract method to check if row has content
                 boolean isEmpty = !hasContentInRow(modelRow);
 
-                boolean shouldShowIcon = false;
-                if (!isLastRow) {
-                    // Not the last row - always show delete icon
-                    shouldShowIcon = true;
-                } else {
-                    // Last row - only show if it has content and there are multiple rows
-                    shouldShowIcon = !isEmpty && rowCount > 1;
-                }
+                // Not the last row: always show; last row: only if has content and there are multiple rows
+                boolean shouldShowIcon = !isLastRow || (!isEmpty && rowCount > 1);
 
                 if (shouldShowIcon && editable) {
                     setIcon(deleteIcon);
@@ -939,87 +911,84 @@ public abstract class AbstractTablePanel<T> extends JPanel {
     /**
      * 移动到下一个（或上一个）可编辑单元格
      *
-     * @param reverse true表示向后移动（Shift+Tab），false表示向前移动（Tab）
+     * @param reverse true 表示向后移动（Shift+Tab），false 表示向前移动（Tab）
      */
     protected void moveToNextEditableCell(boolean reverse) {
-        int currentRow = table.getSelectedRow();
+        int currentRow    = table.getSelectedRow();
         int currentColumn = table.getSelectedColumn();
 
         if (currentRow < 0 || currentColumn < 0) {
-            // 没有选中的单元格，选择第一个可编辑单元格
-            table.changeSelection(0, getFirstEditableColumnIndex(), false, false);
-            table.editCellAt(0, getFirstEditableColumnIndex());
+            startEditAt(0, getFirstEditableColumnIndex());
             return;
         }
 
-        // 停止当前单元格的编辑
         if (table.isEditing()) {
             table.getCellEditor().stopCellEditing();
         }
 
-        // 查找下一个可编辑列
-        int nextColumn = currentColumn;
+        int[] target = reverse
+                ? findPreviousEditableCell(currentRow, currentColumn)
+                : findNextEditableCell(currentRow, currentColumn);
+
+        int targetRow = target[0];
+        int targetCol = target[1];
         int columnCount = table.getColumnCount();
 
-        if (reverse) {
-            // 向后移动
-            int attempts = 0;
-            int maxAttempts = columnCount + table.getRowCount() * columnCount;
-            do {
-                nextColumn--;
-                attempts++;
-                if (nextColumn < 0) {
-                    // 移动到上一行的最后一个可编辑列
-                    if (currentRow > 0) {
-                        currentRow--;
-                        nextColumn = getLastEditableColumnIndex();
-                    } else {
-                        nextColumn = getFirstEditableColumnIndex();
-                        break;
-                    }
-                }
-                if (attempts >= maxAttempts) {
-                    // 安全退出，防止无限循环
-                    nextColumn = getFirstEditableColumnIndex();
-                    break;
-                }
-            } while (!isCellEditableForNavigation(currentRow, nextColumn));
-        } else {
-            // 向前移动
-            int attempts = 0;
-            int maxAttempts = columnCount + table.getRowCount() * columnCount;
-            do {
-                nextColumn++;
-                attempts++;
-                if (nextColumn >= columnCount) {
-                    // 移动到下一行的第一个可编辑列
-                    if (currentRow < table.getRowCount() - 1) {
-                        currentRow++;
-                        nextColumn = getFirstEditableColumnIndex();
-                    } else {
-                        nextColumn = getLastEditableColumnIndex();
-                        break;
-                    }
-                }
-                if (attempts >= maxAttempts) {
-                    // 安全退出，防止无限循环
-                    nextColumn = getFirstEditableColumnIndex();
-                    break;
-                }
-            } while (!isCellEditableForNavigation(currentRow, nextColumn));
+        if (targetCol >= 0 && targetCol < columnCount && targetRow >= 0 && targetRow < table.getRowCount()) {
+            startEditAt(targetRow, targetCol);
         }
+    }
 
-        // 选择并开始编辑下一个单元格
-        if (nextColumn >= 0 && nextColumn < columnCount && currentRow >= 0 && currentRow < table.getRowCount()) {
-            table.changeSelection(currentRow, nextColumn, false, false);
-            if (isCellEditableForNavigation(currentRow, nextColumn)) {
-                table.editCellAt(currentRow, nextColumn);
-                Component editor = table.getEditorComponent();
-                if (editor instanceof JTextField textField) {
-                    editor.requestFocusInWindow();
-                    textField.selectAll();
+    /** 向前（Tab）搜索下一个可编辑单元格，返回 [row, col] */
+    private int[] findNextEditableCell(int row, int col) {
+        int columnCount = table.getColumnCount();
+        int maxAttempts = columnCount * (table.getRowCount() + 1);
+        for (int i = 0; i < maxAttempts; i++) {
+            col++;
+            if (col >= columnCount) {
+                if (row < table.getRowCount() - 1) {
+                    row++;
+                    col = getFirstEditableColumnIndex();
+                } else {
+                    return new int[]{row, getLastEditableColumnIndex()};
                 }
             }
+            if (isCellEditableForNavigation(row, col)) {
+                return new int[]{row, col};
+            }
+        }
+        return new int[]{row, getFirstEditableColumnIndex()};
+    }
+
+    /** 向后（Shift+Tab）搜索上一个可编辑单元格，返回 [row, col] */
+    private int[] findPreviousEditableCell(int row, int col) {
+        int columnCount = table.getColumnCount();
+        int maxAttempts = columnCount * (table.getRowCount() + 1);
+        for (int i = 0; i < maxAttempts; i++) {
+            col--;
+            if (col < 0) {
+                if (row > 0) {
+                    row--;
+                    col = getLastEditableColumnIndex();
+                } else {
+                    return new int[]{row, getFirstEditableColumnIndex()};
+                }
+            }
+            if (isCellEditableForNavigation(row, col)) {
+                return new int[]{row, col};
+            }
+        }
+        return new int[]{row, getFirstEditableColumnIndex()};
+    }
+
+    /** 开始编辑指定单元格并全选文本 */
+    private void startEditAt(int row, int col) {
+        table.changeSelection(row, col, false, false);
+        table.editCellAt(row, col);
+        Component editor = table.getEditorComponent();
+        if (editor instanceof JTextField tf) {
+            editor.requestFocusInWindow();
+            tf.selectAll();
         }
     }
 }

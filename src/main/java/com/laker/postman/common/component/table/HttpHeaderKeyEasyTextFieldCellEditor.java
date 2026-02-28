@@ -47,6 +47,8 @@ public class HttpHeaderKeyEasyTextFieldCellEditor extends AbstractCellEditor imp
     public Component getTableCellEditorComponent(JTable table, Object value,
                                                  boolean isSelected, int row, int column) {
         textField.setText(value == null ? "" : value.toString());
+        // 激活时全选，方便直接覆盖输入
+        SwingUtilities.invokeLater(textField::selectAll);
         return textField;
     }
 }

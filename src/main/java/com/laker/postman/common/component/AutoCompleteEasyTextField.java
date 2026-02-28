@@ -93,7 +93,10 @@ public class AutoCompleteEasyTextField extends EasyTextField {
         });
 
         JScrollPane scrollPane = new JScrollPane(suggestionList);
-        scrollPane.setBorder(new LineBorder(Color.GRAY, 1));
+        // 使用主题感知的边框颜色，深色/浅色主题下均清晰可见
+        scrollPane.setBorder(new LineBorder(UIManager.getColor("Component.borderColor") != null
+                ? UIManager.getColor("Component.borderColor")
+                : UIManager.getColor("Separator.foreground"), 1));
         popup.add(scrollPane);
 
         setupAutoCompleteListeners();

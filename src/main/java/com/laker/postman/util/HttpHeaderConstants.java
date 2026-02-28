@@ -158,21 +158,16 @@ public class HttpHeaderConstants {
             return Collections.emptyList();
         }
 
-        String normalizedHeader = headerName.trim();
+        // 大小写不敏感匹配，兼容用户输入 content-type / Content-Type 等形式
+        String normalizedHeader = headerName.trim().toLowerCase(java.util.Locale.ROOT);
 
-        switch (normalizedHeader) {
-            case "Content-Type":
-                return COMMON_CONTENT_TYPES;
-            case "Accept":
-                return COMMON_ACCEPT_VALUES;
-            case "Accept-Encoding":
-                return COMMON_ACCEPT_ENCODING_VALUES;
-            case "Cache-Control":
-                return COMMON_CACHE_CONTROL_VALUES;
-            case "Connection":
-                return COMMON_CONNECTION_VALUES;
-            default:
-                return Collections.emptyList();
-        }
+        return switch (normalizedHeader) {
+            case "content-type"    -> COMMON_CONTENT_TYPES;
+            case "accept"          -> COMMON_ACCEPT_VALUES;
+            case "accept-encoding" -> COMMON_ACCEPT_ENCODING_VALUES;
+            case "cache-control"   -> COMMON_CACHE_CONTROL_VALUES;
+            case "connection"      -> COMMON_CONNECTION_VALUES;
+            default                -> Collections.emptyList();
+        };
     }
 }

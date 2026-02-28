@@ -85,6 +85,7 @@ public class EasySmartValueCellEditor extends AbstractCellEditor implements Tabl
 
                 @Override
                 public void changedUpdate(DocumentEvent e) {
+                    // changedUpdate fires for attribute changes only (e.g. style); no action needed
                 }
             });
         } else {
@@ -106,6 +107,7 @@ public class EasySmartValueCellEditor extends AbstractCellEditor implements Tabl
 
             @Override
             public void changedUpdate(DocumentEvent e) {
+                // changedUpdate fires for attribute changes only (e.g. style); no action needed
             }
         };
         field.getDocument().addDocumentListener(textFieldListener);
@@ -328,6 +330,8 @@ public class EasySmartValueCellEditor extends AbstractCellEditor implements Tabl
                 switching = false;
             }
             cardLayout.show(containerPanel, CARD_SINGLE);
+            // 激活时全选，方便直接覆盖输入
+            SwingUtilities.invokeLater(textField::selectAll);
         }
 
         log.debug("[getComponent] END");
@@ -402,6 +406,6 @@ public class EasySmartValueCellEditor extends AbstractCellEditor implements Tabl
             total += seg.isEmpty() ? 1 : Math.max(1, (int) Math.ceil((double) fm.stringWidth(seg) / w));
             if (total >= MAX_EDITOR_LINES) return MAX_EDITOR_LINES;
         }
-        return Math.min(MAX_EDITOR_LINES, total);
+        return total;
     }
 }

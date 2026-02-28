@@ -185,7 +185,15 @@ public class EasyHttpHeadersTablePanel extends AbstractTablePanel<Map<String, Ob
 
     @Override
     protected boolean isCellEditableForNavigation(int row, int column) {
-        return column == COL_KEY || column == COL_VALUE;
+        if (column != COL_KEY && column != COL_VALUE) {
+            return false;
+        }
+        // 默认 Header 的 Key 列不可编辑（不参与 Tab/Enter 导航）
+        if (column == COL_KEY) {
+            Object keyObj = tableModel.getValueAt(row, COL_KEY);
+            return keyObj == null || !DEFAULT_HEADER_KEYS.contains(keyObj.toString().trim());
+        }
+        return true;
     }
 
     @Override
@@ -228,8 +236,8 @@ public class EasyHttpHeadersTablePanel extends AbstractTablePanel<Map<String, Ob
     }
 
     @Override
-    protected boolean canDeleteRow(int modelRow) {
-        // Check if it's a default header
+    protected boolean isDeletableRow(int modelRow) {
+        // 默认 header 行不允许删除
         Object keyObj = tableModel.getValueAt(modelRow, COL_KEY);
         String keyStr = keyObj == null ? "" : keyObj.toString().trim();
         return !DEFAULT_HEADER_KEYS.contains(keyStr);

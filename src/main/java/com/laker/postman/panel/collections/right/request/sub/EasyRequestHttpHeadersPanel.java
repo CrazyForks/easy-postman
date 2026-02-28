@@ -59,8 +59,8 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
     private JLabel countLabel;
 
     // Table filtering
-    private TableRowSorter<DefaultTableModel> rowSorter;
-    private DefaultHeaderRowFilter defaultHeaderFilter;
+    private transient TableRowSorter<DefaultTableModel> rowSorter;
+    private transient DefaultHeaderRowFilter defaultHeaderFilter;
     private boolean showDefaultHeaders = false;
 
     public EasyRequestHttpHeadersPanel() {
@@ -148,14 +148,11 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
         add(tablePanel, BorderLayout.CENTER);
     }
 
-    private LinkedHashMap<String, String> initializeTableWithDefaults() {
-        LinkedHashMap<String, String> sortedMap = new LinkedHashMap<>();
-        // Add default headers to the table
+    private void initializeTableWithDefaults() {
+        // 将默认请求头添加到表格
         for (Object[] header : DEFAULT_HEADERS) {
             tablePanel.addRow(header[0], header[1]);
-            sortedMap.put((String) header[0], (String) header[1]);
         }
-        return sortedMap;
     }
 
     private void setupFiltering() {
@@ -261,7 +258,7 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
             Object keyObj = row.get("Key");
             Object valueObj = row.get("Value");
 
-            boolean enabled = enabledObj == null || (Boolean) enabledObj;
+            boolean enabled = !(enabledObj instanceof Boolean b) || b;
             String key = keyObj == null ? "" : keyObj.toString().trim();
             String value = valueObj == null ? "" : valueObj.toString().trim();
 
@@ -278,11 +275,11 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
      * Set headers from list (including enabled state) for loading from persistence
      */
     public void setHeadersList(List<HttpHeader> headersList) {
-        tablePanel.clear();
-
         if (headersList == null || headersList.isEmpty()) {
-            // Re-add default headers
+            // 清空并恢复默认请求头
+            tablePanel.clear();
             initializeTableWithDefaults();
+            applyCurrentFilter();
             return;
         }
 
@@ -528,51 +525,37 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
      * Add a default header in the correct position among other default headers
      */
     private void addDefaultHeaderInOrder(String key, String value, DefaultTableModel model) {
-        // Find the correct position to insert the default header
-        int insertPosition = -1;
-
-        // Define the order of default headers
-        String[] defaultOrder = {USER_AGENT, ACCEPT, ACCEPT_ENCODING, CONNECTION};
-        int keyIndex = -1;
-        for (int i = 0; i < defaultOrder.length; i++) {
-            if (defaultOrder[i].equals(key)) {
-                keyIndex = i;
-                break;
-            }
-        }
-
-        if (keyIndex >= 0) {
-            // Find where to insert this header
-            for (int row = 0; row < model.getRowCount(); row++) {
-                Object rowKey = model.getValueAt(row, 1); // Column 1 is Key
-                if (rowKey != null) {
-                    String rowKeyStr = rowKey.toString().trim();
-
-                    // Find the index of this row's key in default order
-                    int rowKeyIndex = -1;
-                    for (int i = 0; i < defaultOrder.length; i++) {
-                        if (defaultOrder[i].equals(rowKeyStr)) {
-                            rowKeyIndex = i;
-                            break;
-                        }
-                    }
-
-                    if (rowKeyIndex > keyIndex || rowKeyIndex == -1) {
-                        // Insert before this row
-                        insertPosition = row;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Insert at the determined position
+        int insertPosition = findInsertPositionForDefaultHeader(key, model);
         if (insertPosition >= 0) {
             model.insertRow(insertPosition, new Object[]{true, key, value, ""});
         } else {
-            // Add at the end
             model.addRow(new Object[]{true, key, value, ""});
         }
+    }
+
+    /** 返回默认 header 应插入的行索引，-1 表示追加到末尾 */
+    private int findInsertPositionForDefaultHeader(String key, DefaultTableModel model) {
+        String[] defaultOrder = {USER_AGENT, ACCEPT, ACCEPT_ENCODING, CONNECTION};
+        int keyIndex = indexInArray(defaultOrder, key);
+        if (keyIndex < 0) return -1;
+
+        for (int row = 0; row < model.getRowCount(); row++) {
+            Object rowKeyObj = model.getValueAt(row, 1);
+            if (rowKeyObj == null) continue;
+            int rowKeyIndex = indexInArray(defaultOrder, rowKeyObj.toString().trim());
+            if (rowKeyIndex > keyIndex || rowKeyIndex == -1) {
+                return row;
+            }
+        }
+        return -1;
+    }
+
+    /** 返回字符串在数组中的索引，不存在返回 -1 */
+    private static int indexInArray(String[] array, String target) {
+        for (int i = 0; i < array.length; i++) {
+            if (array[i].equals(target)) return i;
+        }
+        return -1;
     }
 
     /**
@@ -709,7 +692,8 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
      * - Key:Value
      * - Key = Value
      * - Key=Value
-     * 空行会被忽略
+     * 空行和 # // 注释行会被忽略。
+     * 已存在 header 的 enabled 状态会被保留。
      */
     private void parseBulkText(String text) {
         if (text == null || text.trim().isEmpty()) {
@@ -718,8 +702,15 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
             return;
         }
 
+        // 构建当前 header 的 enabled 状态快照，供后续复用
+        Map<String, Boolean> enabledSnapshot = new java.util.LinkedHashMap<>();
+        for (HttpHeader existing : getHeadersList()) {
+            enabledSnapshot.put(existing.getKey().trim().toLowerCase(java.util.Locale.ROOT), existing.isEnabled());
+        }
+
         List<HttpHeader> headers = new ArrayList<>();
-        String[] lines = text.split("\n");
+        // 兼容 \r\n（Windows 粘贴）和 \n
+        String[] lines = text.split("\\r?\\n");
 
         for (String line : lines) {
             line = line.trim();
@@ -727,26 +718,29 @@ public class EasyRequestHttpHeadersPanel extends JPanel {
                 continue; // 忽略空行和注释
             }
 
-            // 支持 ":" 和 "=" 两种分隔符
-            String[] parts = null;
-            if (line.contains(":")) {
-                parts = line.split(":", 2);
-            } else if (line.contains("=")) {
-                parts = line.split("=", 2);
+            String key;
+            String value;
+
+            // 优先以第一个 ':' 分割（HTTP Header 标准格式），其次以第一个 '=' 分割
+            int colonIdx = line.indexOf(':');
+            int equalsIdx = line.indexOf('=');
+
+            if (colonIdx > 0) {
+                key   = line.substring(0, colonIdx).trim();
+                value = line.substring(colonIdx + 1).trim();
+            } else if (equalsIdx > 0) {
+                key   = line.substring(0, equalsIdx).trim();
+                value = line.substring(equalsIdx + 1).trim();
+            } else {
+                // 只有 key，没有分隔符 → 当作 key="" 处理
+                key   = line;
+                value = "";
             }
 
-            if (parts != null && parts.length == 2) {
-                String key = parts[0].trim();
-                String value = parts[1].trim();
-                if (!key.isEmpty()) {
-                    headers.add(new HttpHeader(true, key, value));
-                }
-            } else if (line.contains(":") || line.contains("=")) {
-                // 如果包含分隔符但解析失败，可能是值为空的情况
-                String key = line.replaceAll("[=:].*", "").trim();
-                if (!key.isEmpty()) {
-                    headers.add(new HttpHeader(true, key, ""));
-                }
+            if (!key.isEmpty()) {
+                // 保留原来的 enabled 状态
+                boolean enabled = enabledSnapshot.getOrDefault(key.toLowerCase(java.util.Locale.ROOT), true);
+                headers.add(new HttpHeader(enabled, key, value));
             }
         }
 

@@ -98,20 +98,16 @@ public class RequestCollectionsLeftPanel extends SingletonBasePanel {
             public void paint(Graphics g) {
                 super.paint(g);
                 // 在树正常绘制之后，对 hover 行叠加整行背景高亮
-                // 这样不受 renderer clip 限制，整行宽度都能被覆盖
                 if (getCellRenderer() instanceof RequestTreeCellRenderer r) {
                     int row = r.getHoveredRow();
                     if (row >= 0 && row < getRowCount()) {
                         Rectangle bounds = getRowBounds(row);
                         if (bounds != null) {
-                            // 判断该行是否已选中，选中行不叠加
                             TreePath path = getPathForRow(row);
                             if (path != null && !isPathSelected(path)) {
                                 Graphics2D g2 = (Graphics2D) g.create();
                                 boolean dark = com.formdev.flatlaf.FlatLaf.isLafDark();
-                                // 半透明叠加：亮色主题稍微加深，暗色稍微提亮
                                 g2.setColor(dark ? new Color(255, 255, 255, 20) : new Color(0, 0, 0, 18));
-                                // 整行宽度：从 x=0 到树宽
                                 g2.fillRect(0, bounds.y, getWidth(), bounds.height);
                                 g2.dispose();
                             }
@@ -362,20 +358,13 @@ public class RequestCollectionsLeftPanel extends SingletonBasePanel {
         }
 
         DefaultMutableTreeNode targetNode = RequestCollectionsService.findRequestNodeById(rootTreeNode, requestId);
-        if (targetNode == null) { // 如果没有找到对应的请求节点
+        if (targetNode == null) {
             return;
         }
 
-        // 构建完整路径
         TreePath treePath = new TreePath(targetNode.getPath());
-
-        // 展开父节点路径，确保目标节点可见
         requestTree.expandPath(treePath.getParentPath());
-
-        // 选中目标节点
         requestTree.setSelectionPath(treePath);
-
-        // 确保焦点在树上（用于突出显示）
         requestTree.requestFocusInWindow();
     }
 

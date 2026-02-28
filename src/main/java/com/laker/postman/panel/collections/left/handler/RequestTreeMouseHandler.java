@@ -11,6 +11,7 @@ import com.laker.postman.panel.collections.right.RequestEditPanel;
 import com.laker.postman.util.I18nUtil;
 import com.laker.postman.util.IconUtil;
 import com.laker.postman.util.MessageKeys;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -27,6 +28,7 @@ import static com.laker.postman.panel.collections.left.RequestCollectionsLeftPan
  * 请求树鼠标事件处理器
  * 负责处理树节点的单击、双击和右键菜单
  */
+@Slf4j
 public class RequestTreeMouseHandler extends MouseAdapter {
     private final JTree requestTree;
     private final RequestTreePopupMenu popupMenu;
@@ -133,10 +135,12 @@ public class RequestTreeMouseHandler extends MouseAdapter {
     public void mousePressed(MouseEvent e) {
         if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 1) {
             if (isClickOnMoreButton(e)) {
+                e.consume();
                 handleMoreButtonClick(e);
                 return;
             }
             if (isClickOnAddButton(e)) {
+                e.consume(); // 阻止 BasicTreeUI 在 mousePressed/mouseReleased 里把选中覆盖回 group 节点
                 handleAddButtonClick(e);
                 return;
             }
@@ -145,6 +149,18 @@ public class RequestTreeMouseHandler extends MouseAdapter {
             handleDoubleClick(e);
         } else if (SwingUtilities.isRightMouseButton(e)) {
             handleRightClick(e);
+        }
+    }
+
+    /**
+     * mouseReleased 中拦截 Add/More 按钮区域的点击，避免触发节点展开/收起等默认行为
+     */
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 1) {
+            if (isClickOnMoreButton(e) || isClickOnAddButton(e)) {
+                e.consume();
+            }
         }
     }
 
@@ -175,7 +191,8 @@ public class RequestTreeMouseHandler extends MouseAdapter {
         TreePath path = requestTree.getPathForRow(row);
         if (path == null) return;
         DefaultMutableTreeNode groupNode = (DefaultMutableTreeNode) path.getLastPathComponent();
-        requestTree.setSelectionPath(path);
+        // 不在此处 setSelectionPath(path)，避免 group 选中状态与后续 invokeLater 里的
+        // 新请求节点选中产生竞争（addHttpRequestDirectly 内部会定位到新请求节点）
         actions.addHttpRequestDirectly(groupNode);
     }
 

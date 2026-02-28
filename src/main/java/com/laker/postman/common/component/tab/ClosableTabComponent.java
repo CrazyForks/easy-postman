@@ -164,17 +164,15 @@ public class ClosableTabComponent extends JPanel {
 
             @Override
             public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e)) {  // 左键点击
-                    int idx = tabbedPane.indexOfTabComponent(ClosableTabComponent.this); // 获取当前Tab的索引
-                    if (idx != -1) { // 确保索引有效
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    int idx = tabbedPane.indexOfTabComponent(ClosableTabComponent.this);
+                    if (idx != -1) {
                         if (isInCloseButton(e.getX(), e.getY())) {
-                            // 关闭按钮点击：先选中再关闭
                             tabbedPane.setSelectedIndex(idx);
                             SingletonFactory.getInstance(RequestEditPanel.class).closeCurrentTab();
                             return;
                         }
-                        tabbedPane.setSelectedIndex(idx); // 选中当前Tab
-                        // 反向定位到左侧树节点
+                        tabbedPane.setSelectedIndex(idx);
                         locateRequestTreeNode(idx);
                     }
                 }

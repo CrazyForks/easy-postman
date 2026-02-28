@@ -49,27 +49,47 @@ public class HttpHeaderValueEasyTextFieldCellEditor extends EasySmartValueCellEd
     public Component getTableCellEditorComponent(JTable table, Object value,
                                                  boolean isSelected, int row, int column) {
         this.parentTable = table;
-        this.editingRow = row;
+        this.editingRow = row; // view row index
 
         // 调用父类方法（父类始终返回 containerPanel）
         Component editor = super.getTableCellEditorComponent(table, value, isSelected, row, column);
 
-        // 只要当前是单行模式，就更新自动补全建议
+        // 双重 invokeLater：第一次等待 stopCellEditing 写入 model，
+        // 第二次确保所有 TableModelEvent 监听器都已处理完，再读取 Key 值
         if (!isMultiLineMode()) {
-            updateSuggestionsForCurrentKey();
+            SwingUtilities.invokeLater(() ->
+                SwingUtilities.invokeLater(this::updateSuggestionsForCurrentKey)
+            );
         }
 
         return editor;
     }
 
     private void updateSuggestionsForCurrentKey() {
-        if (parentTable == null || editingRow < 0 || editingRow >= parentTable.getModel().getRowCount()) {
+        if (parentTable == null || editingRow < 0) {
             disableAutoComplete();
             return;
         }
 
-        // 获取对应的 Key 值
-        Object keyValue = parentTable.getModel().getValueAt(editingRow, keyColumnIndex);
+        // 将视图行索引转换为模型行索引（RowSorter 可能重排了行顺序）
+        int modelRow = editingRow;
+        if (parentTable.getRowSorter() != null) {
+            try {
+                modelRow = parentTable.getRowSorter().convertRowIndexToModel(editingRow);
+            } catch (IndexOutOfBoundsException e) {
+                // 视图行索引无效（可能被过滤掉了），放弃
+                disableAutoComplete();
+                return;
+            }
+        }
+
+        if (modelRow < 0 || modelRow >= parentTable.getModel().getRowCount()) {
+            disableAutoComplete();
+            return;
+        }
+
+        // 从模型中读取对应的 Key 值
+        Object keyValue = parentTable.getModel().getValueAt(modelRow, keyColumnIndex);
         String headerKey = (keyValue != null) ? keyValue.toString().trim() : "";
 
         // 如果 Key 为空，禁用自动补全

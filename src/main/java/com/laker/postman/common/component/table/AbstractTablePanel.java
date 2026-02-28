@@ -342,6 +342,18 @@ public abstract class AbstractTablePanel<T> extends JPanel {
             public void actionPerformed(java.awt.event.ActionEvent e) {
                 if (!editable) return;
 
+                // 如果自动补全弹窗正在显示，把 Enter 交给弹窗处理（接受建议），不做行间导航
+                if (isAutoCompletePopupVisible()) {
+                    int row = table.isEditing() ? table.getEditingRow()    : table.getSelectedRow();
+                    int col = table.isEditing() ? table.getEditingColumn() : table.getSelectedColumn();
+                    dispatchEnterToEditor();
+                    // Key 列接受建议后自动跳到 Value 列，Value 列接受建议后停留（用户再按 Enter 换行）
+                    if (col == getFirstEditableColumnIndex() && row >= 0) {
+                        enterFromKeyColumn(row);
+                    }
+                    return;
+                }
+
                 int row = table.isEditing() ? table.getEditingRow()    : table.getSelectedRow();
                 int col = table.isEditing() ? table.getEditingColumn() : table.getSelectedColumn();
                 if (row < 0) return;
@@ -363,7 +375,8 @@ public abstract class AbstractTablePanel<T> extends JPanel {
     private void enterFromKeyColumn(int row) {
         int valueCol = getLastEditableColumnIndex();
         if (table.isCellEditable(row, valueCol)) {
-            startEditAt(row, valueCol);
+            // invokeLater 确保 stopCellEditing 已将 Key 值写入 model，Value 编辑器再读取
+            SwingUtilities.invokeLater(() -> startEditAt(row, valueCol));
         }
     }
 
@@ -373,21 +386,76 @@ public abstract class AbstractTablePanel<T> extends JPanel {
         int nextRow = row + 1;
 
         if (nextRow >= table.getRowCount()) {
-            // 最后一行：等 autoAppend 追加后跳入
-            SwingUtilities.invokeLater(() -> {
+            // 当前是最后一行：autoAppendRowFeature 也用 invokeLater 追加新行。
+            // 用双重 invokeLater：第一次让 autoAppend 的 invokeLater 先执行完，
+            // 第二次再跳到新追加的那一行（此时 rowCount 已增加）。
+            SwingUtilities.invokeLater(() -> SwingUtilities.invokeLater(() -> {
                 int last = table.getRowCount() - 1;
-                if (last >= 0) startEditAt(last, keyCol);
-            });
+                if (last > row) {
+                    // 新行已追加，跳到它的 Key 列
+                    startEditAt(last, keyCol);
+                }
+                // 若 autoAppend 没有追加（当前行本身是空行），停留不动
+            }));
             return;
         }
 
-        // 跳过不可编辑的 Key 行（如默认 header 行）
+        // 跳过 Key 列不可编辑的行（如默认 header 行，其 Key 是只读的）
         while (nextRow < table.getRowCount() && !table.isCellEditable(nextRow, keyCol)) {
             nextRow++;
         }
         if (nextRow < table.getRowCount()) {
-            startEditAt(nextRow, keyCol);
+            final int targetRow = nextRow;
+            SwingUtilities.invokeLater(() -> startEditAt(targetRow, keyCol));
         }
+    }
+
+    /**
+     * 检查当前编辑器中是否有自动补全弹窗正在显示。
+     * 用于 Enter 键判断：若弹窗可见，Enter 应接受建议而非跳行。
+     */
+    private boolean isAutoCompletePopupVisible() {
+        Component ed = table.getEditorComponent();
+        if (ed == null) return false;
+        return containsVisibleAutoComplete(ed);
+    }
+
+    private static boolean containsVisibleAutoComplete(Component root) {
+        // 导入路径避免硬依赖：通过类名反射判断，或直接检查方法
+        if (root instanceof com.laker.postman.common.component.AutoCompleteEasyTextField ac) {
+            return ac.isAutoCompletePopupVisible();
+        }
+        if (root instanceof Container c) {
+            for (Component child : c.getComponents()) {
+                if (containsVisibleAutoComplete(child)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 把 Enter 键事件直接转发给编辑器中的文本框，
+     * 让 AutoCompleteEasyTextField 的 KeyAdapter 接受建议。
+     */
+    private void dispatchEnterToEditor() {
+        Component ed = table.getEditorComponent();
+        if (ed == null) return;
+        com.laker.postman.common.component.AutoCompleteEasyTextField ac = findAutoComplete(ed);
+        if (ac != null) {
+            // 直接调用接受建议的逻辑（通过公开方法触发）
+            ac.acceptCurrentSuggestion();
+        }
+    }
+
+    private static com.laker.postman.common.component.AutoCompleteEasyTextField findAutoComplete(Component root) {
+        if (root instanceof com.laker.postman.common.component.AutoCompleteEasyTextField ac) return ac;
+        if (root instanceof Container c) {
+            for (Component child : c.getComponents()) {
+                var found = findAutoComplete(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     /**
@@ -922,36 +990,42 @@ public abstract class AbstractTablePanel<T> extends JPanel {
             return;
         }
 
+        // 先提交当前编辑，再寻找目标单元格
         if (table.isEditing()) {
             table.getCellEditor().stopCellEditing();
         }
 
-        int[] target = reverse
+        // 计算目标单元格（stopCellEditing 是同步的，但 model 更新可能触发事件，用 invokeLater 保证时序）
+        final int[] target = reverse
                 ? findPreviousEditableCell(currentRow, currentColumn)
                 : findNextEditableCell(currentRow, currentColumn);
 
-        int targetRow = target[0];
-        int targetCol = target[1];
-        int columnCount = table.getColumnCount();
+        final int targetRow = target[0];
+        final int targetCol = target[1];
+        final int columnCount = table.getColumnCount();
 
-        if (targetCol >= 0 && targetCol < columnCount && targetRow >= 0 && targetRow < table.getRowCount()) {
-            startEditAt(targetRow, targetCol);
-        }
+        SwingUtilities.invokeLater(() -> {
+            if (targetCol >= 0 && targetCol < columnCount && targetRow >= 0 && targetRow < table.getRowCount()) {
+                startEditAt(targetRow, targetCol);
+            }
+        });
     }
 
     /** 向前（Tab）搜索下一个可编辑单元格，返回 [row, col] */
     private int[] findNextEditableCell(int row, int col) {
-        int columnCount = table.getColumnCount();
-        int maxAttempts = columnCount * (table.getRowCount() + 1);
+        int columnCount  = table.getColumnCount();
+        int maxAttempts  = columnCount * (table.getRowCount() + 1);
         for (int i = 0; i < maxAttempts; i++) {
             col++;
             if (col >= columnCount) {
                 if (row < table.getRowCount() - 1) {
                     row++;
-                    col = getFirstEditableColumnIndex();
+                    col = getFirstEditableColumnIndex() - 1; // 下一次循环 +1 后正好是 firstEditable
                 } else {
+                    // 已到末尾，停在最后一个可编辑列
                     return new int[]{row, getLastEditableColumnIndex()};
                 }
+                continue; // 让循环 col++ 来到正确位置
             }
             if (isCellEditableForNavigation(row, col)) {
                 return new int[]{row, col};
@@ -969,10 +1043,12 @@ public abstract class AbstractTablePanel<T> extends JPanel {
             if (col < 0) {
                 if (row > 0) {
                     row--;
-                    col = getLastEditableColumnIndex();
+                    col = getLastEditableColumnIndex() + 1; // 下一次循环 -1 后正好是 lastEditable
                 } else {
+                    // 已到开头，停在第一个可编辑列
                     return new int[]{row, getFirstEditableColumnIndex()};
                 }
+                continue;
             }
             if (isCellEditableForNavigation(row, col)) {
                 return new int[]{row, col};
@@ -985,10 +1061,37 @@ public abstract class AbstractTablePanel<T> extends JPanel {
     private void startEditAt(int row, int col) {
         table.changeSelection(row, col, false, false);
         table.editCellAt(row, col);
-        Component editor = table.getEditorComponent();
-        if (editor instanceof JTextField tf) {
-            editor.requestFocusInWindow();
-            tf.selectAll();
+        // 延迟获取焦点：editCellAt 可能异步完成，invokeLater 确保编辑器已渲染
+        SwingUtilities.invokeLater(() -> {
+            Component ed = table.getEditorComponent();
+            if (ed == null) return;
+            // 直接是 JTextField
+            if (ed instanceof JTextField tf) {
+                tf.requestFocusInWindow();
+                tf.selectAll();
+                return;
+            }
+            // 容器面板（EasySmartValueCellEditor / AutoComplete 编辑器）
+            // 找到其中第一个可获焦的 JTextField
+            JTextField tf = findFirstTextField(ed);
+            if (tf != null) {
+                tf.requestFocusInWindow();
+                tf.selectAll();
+            } else {
+                ed.requestFocusInWindow();
+            }
+        });
+    }
+
+    /** 在组件树中找到第一个可见的 JTextField */
+    private static JTextField findFirstTextField(Component root) {
+        if (root instanceof JTextField tf) return tf;
+        if (root instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                JTextField found = findFirstTextField(child);
+                if (found != null) return found;
+            }
         }
+        return null;
     }
 }

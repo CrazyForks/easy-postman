@@ -171,11 +171,17 @@ public class AutoCompleteEasyTextField extends EasyTextField {
                 e.consume();
                 moveSelection(-1);
                 break;
-            case KeyEvent.VK_ENTER, KeyEvent.VK_TAB:
+            case KeyEvent.VK_ENTER:
+                // Enter 接受当前选中的建议
                 if (suggestionList.getSelectedIndex() >= 0) {
                     e.consume();
                     acceptSelectedSuggestion();
                 }
+                break;
+            case KeyEvent.VK_TAB:
+                // Tab 关闭弹窗，让表格的 Tab 导航处理焦点移动
+                // 不消费事件，让事件继续向上传递给表格的 InputMap
+                hidePopup();
                 break;
             case KeyEvent.VK_ESCAPE:
                 e.consume();
@@ -355,6 +361,22 @@ public class AutoCompleteEasyTextField extends EasyTextField {
     public void showAllSuggestions() {
         if (autoCompleteEnabled && !suggestions.isEmpty()) {
             updateSuggestions();
+        }
+    }
+
+    /**
+     * 返回自动补全弹窗是否当前可见
+     */
+    public boolean isAutoCompletePopupVisible() {
+        return popup != null && popup.isVisible();
+    }
+
+    /**
+     * 接受当前高亮的建议（供外部调用，等同于用户按 Enter）
+     */
+    public void acceptCurrentSuggestion() {
+        if (popup != null && popup.isVisible() && suggestionList.getSelectedIndex() >= 0) {
+            acceptSelectedSuggestion();
         }
     }
 }

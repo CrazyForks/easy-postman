@@ -212,8 +212,14 @@ public class AddRequestDialog {
         DefaultMutableTreeNode reqNode = new DefaultMutableTreeNode(new Object[]{REQUEST, defaultRequest});
         groupNode.add(reqNode);
         leftPanel.getTreeModel().reload(groupNode);
-        leftPanel.getRequestTree().expandPath(new TreePath(groupNode.getPath()));
+        JTree tree = leftPanel.getRequestTree();
+        tree.expandPath(new TreePath(groupNode.getPath()));
         leftPanel.getPersistence().saveRequestGroups();
+
+        // 定位到新创建的请求节点
+        TreePath newPath = new TreePath(reqNode.getPath());
+        tree.setSelectionPath(newPath);
+        tree.scrollPathToVisible(newPath);
 
         // 自动打开新创建的请求
         SingletonFactory.getInstance(RequestEditPanel.class).showOrCreateTab(defaultRequest);

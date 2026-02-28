@@ -8,6 +8,7 @@ import com.laker.postman.common.SingletonFactory;
 import com.laker.postman.common.component.tab.ClosableTabComponent;
 import com.laker.postman.common.component.tab.PlusPanel;
 import com.laker.postman.common.component.tab.PlusTabComponent;
+import com.laker.postman.common.component.tab.TabbedPaneDragHandler;
 import com.laker.postman.common.constants.ModernColors;
 import com.laker.postman.frame.MainFrame;
 import com.laker.postman.model.HttpRequestItem;
@@ -52,6 +53,9 @@ public class RequestEditPanel extends SingletonBasePanel {
     public static final String GROUP = "group";
     @Getter
     private JTabbedPane tabbedPane; // 使用 JTabbedPane 管理多个请求编辑子面板
+
+    @Getter
+    private TabbedPaneDragHandler dragHandler; // Tab 拖拽排序支持
 
     // 预览模式：单击使用的临时 tab（可被下次单击替换）
     private Component previewTab = null; // 可以是 RequestEditSubPanel 或 GroupEditPanel
@@ -712,6 +716,12 @@ public class RequestEditPanel extends SingletonBasePanel {
         tabbedPane.putClientProperty(TABBED_PANE_TAB_INSETS, new Insets(3, 5, 3, 5));
         tabbedPane.putClientProperty(TABBED_PANE_TAB_HEIGHT, 38); // 设置tab高度，配合内边距让tab更美观
         add(tabbedPane, BorderLayout.CENTER);
+
+        // 安装 Tab 拖拽排序支持（IDEA 风格蓝色竖线指示）
+        // 通过 getter/setter 传入 previewTabIndex，确保拖拽移动后索引正确同步
+        dragHandler = TabbedPaneDragHandler.install(tabbedPane,
+                () -> previewTabIndex,
+                v -> previewTabIndex = v);
     }
 
     @Override

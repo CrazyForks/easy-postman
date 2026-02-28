@@ -274,7 +274,6 @@ public final class MessageKeys {
     public static final String SCRIPT_HELP_SHORTCUTS = "script.help.shortcuts";
     public static final String SCRIPT_HELP_EXAMPLES = "script.help.examples";
     public static final String SCRIPT_PRESCRIPT_EXECUTION_FAILED = "script.prescript.execution.failed";
-    public static final String SCRIPT_PRESCRIPT_ERROR_TITLE = "script.prescript.error.title";
     public static final String SCRIPT_POSTSCRIPT_EXECUTION_FAILED = "script.postscript.execution.failed";
     public static final String SCRIPT_POSTSCRIPT_ERROR_TITLE = "script.postscript.error.title";
 
@@ -336,7 +335,6 @@ public final class MessageKeys {
     public static final String ENV_MENU_IMPORT_EASY = "env.menu.import_easy";
     public static final String ENV_MENU_IMPORT_POSTMAN = "env.menu.import_postman";
     public static final String ENV_MENU_IMPORT_INTELLIJ = "env.menu.import_intellij";
-    public static final String ENV_MENU_EXPORT = "env.menu.export";
     public static final String ENV_DIALOG_SAVE_CHANGES_TITLE = "env.dialog.save_changes.title";
     public static final String ENV_DIALOG_SAVE_SUCCESS = "env.dialog.save.success";
     public static final String ENV_DIALOG_EXPORT_TITLE = "env.dialog.export.title";
@@ -594,7 +592,6 @@ public final class MessageKeys {
 
     // ============ 集合菜单相关 ============
     public static final String COLLECTIONS_MENU_ADD_GROUP = "collections.menu.add_group";
-    public static final String COLLECTIONS_MENU_ADD_ROOT_GROUP = "collections.menu.add_root_group";
     public static final String COLLECTIONS_MENU_ADD_REQUEST = "collections.menu.add_request";
     public static final String COLLECTIONS_MENU_DUPLICATE = "collections.menu.duplicate";
     public static final String COLLECTIONS_MENU_EXPORT_POSTMAN = "collections.menu.export_postman";
@@ -1868,17 +1865,17 @@ public final class MessageKeys {
     public static final String TOOLBOX_CRON_DESC_WEEK_WEEKDAYS = "toolbox.cron.desc.week.weekdays";
     // month names
     public static final String[] TOOLBOX_CRON_DESC_MONTHS = {
-        null,
-        "toolbox.cron.desc.month.1",  "toolbox.cron.desc.month.2",  "toolbox.cron.desc.month.3",
-        "toolbox.cron.desc.month.4",  "toolbox.cron.desc.month.5",  "toolbox.cron.desc.month.6",
-        "toolbox.cron.desc.month.7",  "toolbox.cron.desc.month.8",  "toolbox.cron.desc.month.9",
-        "toolbox.cron.desc.month.10", "toolbox.cron.desc.month.11", "toolbox.cron.desc.month.12"
+            null,
+            "toolbox.cron.desc.month.1", "toolbox.cron.desc.month.2", "toolbox.cron.desc.month.3",
+            "toolbox.cron.desc.month.4", "toolbox.cron.desc.month.5", "toolbox.cron.desc.month.6",
+            "toolbox.cron.desc.month.7", "toolbox.cron.desc.month.8", "toolbox.cron.desc.month.9",
+            "toolbox.cron.desc.month.10", "toolbox.cron.desc.month.11", "toolbox.cron.desc.month.12"
     };
     // weekday names (index 0=Sun, 1=Mon … 6=Sat)
     public static final String[] TOOLBOX_CRON_DESC_WEEKDAYS = {
-        "toolbox.cron.desc.week.sun", "toolbox.cron.desc.week.mon", "toolbox.cron.desc.week.tue",
-        "toolbox.cron.desc.week.wed", "toolbox.cron.desc.week.thu", "toolbox.cron.desc.week.fri",
-        "toolbox.cron.desc.week.sat"
+            "toolbox.cron.desc.week.sun", "toolbox.cron.desc.week.mon", "toolbox.cron.desc.week.tue",
+            "toolbox.cron.desc.week.wed", "toolbox.cron.desc.week.thu", "toolbox.cron.desc.week.fri",
+            "toolbox.cron.desc.week.sat"
     };
 
     // ============ 客户端证书相关 ============

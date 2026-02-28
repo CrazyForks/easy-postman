@@ -191,10 +191,18 @@ public class TopMenuBar extends SingletonBaseMenuBar implements IRefreshable {
 
     private void addFileMenu() {
         JMenu fileMenu = new JMenu(I18nUtil.getMessage(MessageKeys.MENU_FILE));
+
+        JMenuItem exportCollectionsMenuItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.MENU_FILE_EXPORT_COLLECTIONS));
+        exportCollectionsMenuItem.setIcon(new FlatSVGIcon("icons/export.svg", 16, 16));
+        exportCollectionsMenuItem.addActionListener(e -> exportAllCollections());
+        fileMenu.add(exportCollectionsMenuItem);
+
+        fileMenu.addSeparator();
+
         JMenuItem logMenuItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.MENU_FILE_LOG));
         logMenuItem.addActionListener(e -> openLogDirectory());
+
         JMenuItem exitMenuItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.MENU_FILE_EXIT));
-        // 使用 ShortcutManager 获取退出快捷键
         KeyStroke exitKey = ShortcutManager.getKeyStroke(ShortcutManager.EXIT_APP);
         if (exitKey != null) {
             exitMenuItem.setAccelerator(exitKey);
@@ -203,6 +211,26 @@ public class TopMenuBar extends SingletonBaseMenuBar implements IRefreshable {
         fileMenu.add(logMenuItem);
         fileMenu.add(exitMenuItem);
         add(fileMenu);
+    }
+
+    private void exportAllCollections() {
+        RequestCollectionsLeftPanel leftPanel = SingletonFactory.getInstance(RequestCollectionsLeftPanel.class);
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle(I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_DIALOG_TITLE));
+        fileChooser.setSelectedFile(new File(RequestCollectionsLeftPanel.EXPORT_FILE_NAME));
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            try {
+                leftPanel.getPersistence().exportRequestCollection(fileToSave);
+                NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_SUCCESS));
+            } catch (Exception ex) {
+                log.error("Export error", ex);
+                JOptionPane.showMessageDialog(this,
+                        I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_FAIL, ex.getMessage()),
+                        I18nUtil.getMessage(MessageKeys.GENERAL_ERROR), JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private void openLogDirectory() {

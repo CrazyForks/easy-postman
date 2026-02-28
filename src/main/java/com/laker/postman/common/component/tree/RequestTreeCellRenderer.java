@@ -117,7 +117,7 @@ public class RequestTreeCellRenderer extends DefaultTreeCellRenderer {
         boolean isHover = (row == hoveredRow);
 
         if (isRootLevel) {
-            setIcon(new FlatSVGIcon("icons/root_group.svg", ICON_SIZE, ICON_SIZE));
+            setIcon(new FlatSVGIcon("icons/collection.svg", ICON_SIZE, ICON_SIZE));
 
         } else {
             setIcon(new FlatSVGIcon("icons/group.svg", ICON_SIZE, ICON_SIZE));

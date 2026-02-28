@@ -13,6 +13,7 @@ public final class MessageKeys {
     public static final String MENU_FILE = "menu.file";
     public static final String MENU_FILE_LOG = "menu.file.log";
     public static final String MENU_FILE_EXIT = "menu.file.exit";
+    public static final String MENU_FILE_EXPORT_COLLECTIONS = "menu.file.export_collections";
     public static final String MENU_LANGUAGE = "menu.language";
     public static final String MENU_THEME = "menu.theme";
     public static final String MENU_THEME_LIGHT = "menu.theme.light";
@@ -577,6 +578,7 @@ public final class MessageKeys {
     public static final String EXIT_CANCEL = "exit.cancel";
 
     // ============ 集合相关 ============
+    public static final String COLLECTIONS_NEW_COLLECTION = "collections.new_collection";
     public static final String COLLECTIONS_IMPORT_CURL_DETECTED = "collections.import.curl.detected";
     public static final String COLLECTIONS_IMPORT_CURL_TITLE = "collections.import.curl.title";
     public static final String COLLECTIONS_IMPORT_EASY = "collections.import.easy";

@@ -83,7 +83,7 @@ public class RequestTreePopupMenu {
     private void addRootGroupMenuItem(JPopupMenu menu) {
         JMenuItem item = new JMenuItem(
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_ADD_ROOT_GROUP),
-                IconUtil.create("icons/root_group.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL)
+                IconUtil.create("icons/collection.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL)
         );
         item.addActionListener(e -> actions.showAddGroupDialog(leftPanel.getRootTreeNode()));
         menu.add(item);

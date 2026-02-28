@@ -5,15 +5,15 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.laker.postman.common.SingletonBasePanel;
 import com.laker.postman.common.SingletonFactory;
 import com.laker.postman.common.component.SearchTextField;
-import com.laker.postman.common.component.button.ExportButton;
-import com.laker.postman.common.component.button.ImportButton;
 import com.laker.postman.common.component.dialog.CurlImportDialog;
 import com.laker.postman.frame.MainFrame;
 import com.laker.postman.model.*;
+import com.laker.postman.panel.collections.left.action.RequestTreeActions;
 import com.laker.postman.panel.collections.right.RequestEditPanel;
 import com.laker.postman.panel.topmenu.TopMenuBar;
 import com.laker.postman.service.EnvironmentService;
@@ -28,6 +28,7 @@ import com.laker.postman.service.ideahttp.IntelliJHttpParser;
 import com.laker.postman.service.postman.PostmanCollectionParser;
 import com.laker.postman.service.swagger.SwaggerParser;
 import com.laker.postman.util.I18nUtil;
+import com.laker.postman.util.IconUtil;
 import com.laker.postman.util.MessageKeys;
 import com.laker.postman.util.NotificationUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -50,30 +51,136 @@ import java.nio.charset.StandardCharsets;
 
 import static com.laker.postman.panel.collections.left.RequestCollectionsLeftPanel.*;
 
+
 @Slf4j
 public class LeftTopPanel extends SingletonBasePanel {
     // 记录上次文件选择器打开的目录（应用运行期间保持）
     private static File lastSelectedDirectory = null;
 
     private SearchTextField searchField;
-    private ImportButton importBtn;
+    /** + 按钮（新建集合 / 各种导入） */
+    private JButton plusBtn;
 
     @Override
     protected void initUI() {
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-        setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // 设置上下左右边距
+        setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        importBtn = new ImportButton();
-        importBtn.addActionListener(e -> handleImportClick());
-
-        ExportButton exportBtn = new ExportButton();
-        exportBtn.addActionListener(e -> exportRequestCollection());
+        plusBtn = new JButton();
+        plusBtn.setIcon(IconUtil.createThemed("icons/plus.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        plusBtn.setToolTipText("New / Import");
+        plusBtn.setFocusable(false);
+        plusBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        plusBtn.putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON);
+        plusBtn.addActionListener(e -> showPlusMenu());
 
         searchField = new SearchTextField();
 
-        add(importBtn);
-        add(exportBtn);
+        add(plusBtn);
+        add(Box.createHorizontalStrut(4));
         add(searchField);
+    }
+
+    /**
+     * 点击 + 按钮弹出菜单：新建集合 + 分隔线 + 各种导入
+     */
+    private void showPlusMenu() {
+        // 先检测剪贴板是否有 cURL
+        String clipboardText = getClipboardText();
+        if (clipboardText != null && clipboardText.trim().toLowerCase().startsWith("curl")) {
+            int result = JOptionPane.showConfirmDialog(
+                    SingletonFactory.getInstance(MainFrame.class),
+                    I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_DETECTED),
+                    I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_TITLE),
+                    JOptionPane.YES_NO_OPTION);
+            if (result == JOptionPane.YES_OPTION) {
+                importCurlToCollection(clipboardText);
+                return;
+            }
+        }
+
+        JPopupMenu menu = buildPlusMenu();
+        menu.show(plusBtn, 0, plusBtn.getHeight());
+    }
+
+    private JPopupMenu buildPlusMenu() {
+        JPopupMenu menu = new JPopupMenu();
+
+        // ── 新建集合
+        JMenuItem newCollection = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_NEW_COLLECTION),
+                IconUtil.create("icons/collection.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        newCollection.addActionListener(e -> {
+            RequestCollectionsLeftPanel leftPanel = SingletonFactory.getInstance(RequestCollectionsLeftPanel.class);
+            RequestTreeActions actions = new RequestTreeActions(leftPanel.getRequestTree(), leftPanel);
+            actions.showAddGroupDialog(leftPanel.getRootTreeNode());
+        });
+        menu.add(newCollection);
+
+        menu.addSeparator();
+
+        // ── 各种导入
+        JMenuItem importEasy = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_EASY),
+                new FlatSVGIcon("icons/easy.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importEasy.addActionListener(e -> importRequestCollection());
+        menu.add(importEasy);
+
+        JMenuItem importPostman = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_POSTMAN),
+                new FlatSVGIcon("icons/postman.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importPostman.addActionListener(e -> importPostmanCollection());
+        menu.add(importPostman);
+
+        JMenuItem importSwagger2 = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SWAGGER2),
+                new FlatSVGIcon("icons/swagger.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importSwagger2.addActionListener(e -> importSwaggerCollection());
+        menu.add(importSwagger2);
+
+        JMenuItem importOpenApi3 = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_OPENAPI3),
+                new FlatSVGIcon("icons/openapi.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importOpenApi3.addActionListener(e -> importSwaggerCollection());
+        menu.add(importOpenApi3);
+
+        JMenuItem importHar = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HAR),
+                new FlatSVGIcon("icons/insomnia.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importHar.addActionListener(e -> importHarCollection());
+        menu.add(importHar);
+
+        JMenuItem importHttp = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HTTP),
+                new FlatSVGIcon("icons/idea-http.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importHttp.addActionListener(e -> importHttpFile());
+        menu.add(importHttp);
+
+        JMenuItem importApiPost = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_APIPOST),
+                new FlatSVGIcon("icons/apipost.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importApiPost.addActionListener(e -> importApiPostCollection());
+        menu.add(importApiPost);
+
+        JMenuItem importCurl = new JMenuItem(
+                I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL),
+                new FlatSVGIcon("icons/curl.svg", IconUtil.SIZE_MEDIUM, IconUtil.SIZE_MEDIUM));
+        importCurl.addActionListener(e -> importCurlToCollection(null));
+        menu.add(importCurl);
+
+        return menu;
+    }
+
+    private String getClipboardText() {
+        try {
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            Transferable t = clipboard.getContents(null);
+            if (t != null && t.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+                return (String) t.getTransferData(DataFlavor.stringFlavor);
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     @Override
@@ -152,69 +259,6 @@ public class LeftTopPanel extends SingletonBasePanel {
         });
     }
 
-
-    private void handleImportClick() {
-        // 智能检测剪贴板内容
-        String clipboardText = null;
-        try {
-            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-            Transferable t = clipboard.getContents(null);
-            if (t != null && t.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-                clipboardText = (String) t.getTransferData(DataFlavor.stringFlavor);
-            }
-        } catch (Exception ignored) {
-        }
-        if (clipboardText != null && clipboardText.trim().toLowerCase().startsWith("curl")) {
-            int result = JOptionPane.showConfirmDialog(SingletonFactory.getInstance(MainFrame.class),
-                    I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_DETECTED),
-                    I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL_TITLE), JOptionPane.YES_NO_OPTION);
-            if (result == JOptionPane.YES_OPTION) {
-                importCurlToCollection(clipboardText); // 自动填充
-                return;
-            }
-        }
-
-        // 显示导入菜单
-        JPopupMenu importMenu = getImportMenu();
-        importMenu.show(importBtn, 0, importBtn.getHeight());
-    }
-
-    private JPopupMenu getImportMenu() {
-        JPopupMenu importMenu = new JPopupMenu();
-        JMenuItem importEasyToolsItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_EASY),
-                new FlatSVGIcon("icons/easy.svg", 20, 20));
-        importEasyToolsItem.addActionListener(e -> importRequestCollection());
-        JMenuItem importPostmanItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_POSTMAN),
-                new FlatSVGIcon("icons/postman.svg", 20, 20));
-        importPostmanItem.addActionListener(e -> importPostmanCollection());
-        JMenuItem importSwagger2Item = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_SWAGGER2),
-                new FlatSVGIcon("icons/swagger.svg", 20, 20));
-        importSwagger2Item.addActionListener(e -> importSwaggerCollection());
-        JMenuItem importOpenApi3Item = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_OPENAPI3),
-                new FlatSVGIcon("icons/openapi.svg", 20, 20));
-        importOpenApi3Item.addActionListener(e -> importSwaggerCollection());
-        JMenuItem importHarItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HAR),
-                new FlatSVGIcon("icons/insomnia.svg", 20, 20));
-        importHarItem.addActionListener(e -> importHarCollection());
-        JMenuItem importHttpItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_HTTP),
-                new FlatSVGIcon("icons/idea-http.svg", 20, 20));
-        importHttpItem.addActionListener(e -> importHttpFile());
-        JMenuItem importApiPostItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_APIPOST),
-                new FlatSVGIcon("icons/apipost.svg", 20, 20));
-        importApiPostItem.addActionListener(e -> importApiPostCollection());
-        JMenuItem importCurlItem = new JMenuItem(I18nUtil.getMessage(MessageKeys.COLLECTIONS_IMPORT_CURL),
-                new FlatSVGIcon("icons/curl.svg", 20, 20));
-        importCurlItem.addActionListener(e -> importCurlToCollection(null));
-        importMenu.add(importEasyToolsItem);
-        importMenu.add(importPostmanItem);
-        importMenu.add(importSwagger2Item);
-        importMenu.add(importOpenApi3Item);
-        importMenu.add(importHarItem);
-        importMenu.add(importHttpItem);
-        importMenu.add(importApiPostItem);
-        importMenu.add(importCurlItem);
-        return importMenu;
-    }
 
 
     // 导入请求集合JSON文件
@@ -556,28 +600,6 @@ public class LeftTopPanel extends SingletonBasePanel {
     }
 
 
-    // 导出请求集合到JSON文件
-    private void exportRequestCollection() {
-        RequestCollectionsLeftPanel leftPanel = SingletonFactory.getInstance(RequestCollectionsLeftPanel.class);
-        MainFrame mainFrame = SingletonFactory.getInstance(MainFrame.class);
-        JFileChooser fileChooser = createFileChooserWithLastPath();
-        fileChooser.setDialogTitle(I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_DIALOG_TITLE));
-        fileChooser.setSelectedFile(new File(EXPORT_FILE_NAME));
-        int userSelection = fileChooser.showSaveDialog(mainFrame);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            File fileToSave = fileChooser.getSelectedFile();
-            updateLastSelectedDirectory(fileToSave);
-            try {
-                leftPanel.getPersistence().exportRequestCollection(fileToSave);
-                NotificationUtil.showSuccess(I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_SUCCESS));
-            } catch (Exception ex) {
-                log.error("Export error", ex);
-                JOptionPane.showMessageDialog(mainFrame,
-                        I18nUtil.getMessage(MessageKeys.COLLECTIONS_EXPORT_FAIL, ex.getMessage()),
-                        I18nUtil.getMessage(MessageKeys.GENERAL_ERROR), JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
 
 
     // 递归过滤节点，支持大小写敏感和整词匹配

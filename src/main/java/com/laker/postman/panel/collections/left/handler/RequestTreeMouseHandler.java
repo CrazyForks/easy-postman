@@ -223,7 +223,7 @@ public class RequestTreeMouseHandler extends MouseAdapter {
 
         JMenuItem addGroup = new JMenuItem(
                 I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_ADD_GROUP),
-                IconUtil.createThemed("icons/group.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
+                IconUtil.create("icons/group.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL));
         addGroup.addActionListener(ev -> actions.addGroupUnderSelected());
         menu.add(addGroup);
 

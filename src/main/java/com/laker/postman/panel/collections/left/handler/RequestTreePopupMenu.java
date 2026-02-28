@@ -39,8 +39,6 @@ public class RequestTreePopupMenu {
         TreePath[] selectedPaths = requestTree.getSelectionPaths();
         boolean isMultipleSelection = selectedPaths != null && selectedPaths.length > 1;
 
-        // 始终显示"创建根分组"选项
-        addRootGroupMenuItem(menu);
 
         if (selectedNode == null || selectedNode == leftPanel.getRootTreeNode()) {
             menu.show(requestTree, x, y);
@@ -77,23 +75,11 @@ public class RequestTreePopupMenu {
         menu.show(requestTree, x, y);
     }
 
-    /**
-     * 添加创建根分组菜单项
-     */
-    private void addRootGroupMenuItem(JPopupMenu menu) {
-        JMenuItem item = new JMenuItem(
-                I18nUtil.getMessage(MessageKeys.COLLECTIONS_MENU_ADD_ROOT_GROUP),
-                IconUtil.create("icons/collection.svg", IconUtil.SIZE_SMALL, IconUtil.SIZE_SMALL)
-        );
-        item.addActionListener(e -> actions.showAddGroupDialog(leftPanel.getRootTreeNode()));
-        menu.add(item);
-    }
 
     /**
      * 添加分组相关菜单项
      */
     private void addGroupMenuItems(JPopupMenu menu, DefaultMutableTreeNode selectedNode, boolean isMultipleSelection) {
-        menu.addSeparator();
 
         // 添加到功能测试
         JMenuItem addToFunctional = createMenuItem(

@@ -59,6 +59,13 @@ public abstract class AbstractTablePanel<T> extends JPanel {
      */
     protected boolean isStoppingCellEdit = false;
 
+    /**
+     * 当前鼠标悬停的行索引（视图索引），-1 表示无悬停
+     */
+    protected int hoveredRow = -1;
+
+    private static final String ACTION_DELETE_ROW = "deleteRow";
+
     // ========== 构造函数 ==========
 
     /**
@@ -225,6 +232,171 @@ public abstract class AbstractTablePanel<T> extends JPanel {
 
         // 关键设置：失去焦点时自动停止编辑并保存，实现 Postman 风格的即时保存
         table.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+
+        // 单击即进入编辑模式（Postman 风格）
+        setupSingleClickEditing();
+
+        // 行悬停高亮
+        setupRowHoverHighlight();
+
+        // Delete / Backspace 键删除选中行
+        setupDeleteKeyShortcut();
+
+        // Enter 键在列间跳转
+        setupEnterKeyNavigation();
+    }
+
+    /**
+     * 单击即进入编辑模式
+     */
+    private void setupSingleClickEditing() {
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (!editable || !SwingUtilities.isLeftMouseButton(e)) return;
+                int row = table.rowAtPoint(e.getPoint());
+                int col = table.columnAtPoint(e.getPoint());
+                if (row < 0 || col < 0) return;
+                // 只对文本类可编辑列触发，跳过 checkbox 和 delete 列
+                if (col == getEnabledColumnIndex() || col == getDeleteColumnIndex()) return;
+                if (!table.isCellEditable(row, col)) return;
+                // 延迟一帧，确保选中动作先完成
+                SwingUtilities.invokeLater(() -> {
+                    if (!table.isEditing() || table.getEditingRow() != row || table.getEditingColumn() != col) {
+                        table.editCellAt(row, col);
+                        Component ed = table.getEditorComponent();
+                        if (ed != null) {
+                            ed.requestFocusInWindow();
+                            if (ed instanceof JTextField tf) tf.selectAll();
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 悬停行高亮：鼠标进入/移动时记录当前行，离开时清除
+     */
+    private void setupRowHoverHighlight() {
+        table.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(java.awt.event.MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row != hoveredRow) {
+                    hoveredRow = row;
+                    table.repaint();
+                }
+            }
+        });
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                if (hoveredRow != -1) {
+                    hoveredRow = -1;
+                    table.repaint();
+                }
+            }
+        });
+    }
+
+    /**
+     * Delete / Backspace 键删除当前选中行（仅当单元格不在编辑状态时）
+     */
+    private void setupDeleteKeyShortcut() {
+        InputMap inputMap = table.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap actionMap = table.getActionMap();
+
+        AbstractAction deleteAction = new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (!table.isEditing()) {
+                    deleteSelectedRow();
+                }
+            }
+        };
+
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_DELETE, 0), ACTION_DELETE_ROW);
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_SPACE, 0), ACTION_DELETE_ROW);
+        actionMap.put(ACTION_DELETE_ROW, deleteAction);
+    }
+
+    /**
+     * Enter 键导航：
+     * - 在 Key 列按 Enter → 跳到同行 Value 列
+     * - 在 Value 列按 Enter → 跳到下一行 Key 列（如无下一行则追加）
+     */
+    private void setupEnterKeyNavigation() {
+        InputMap inputMap = table.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        ActionMap actionMap = table.getActionMap();
+
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "enterNav");
+        actionMap.put("enterNav", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (!editable) return;
+
+                int row = table.getEditingRow();
+                int col = table.getEditingColumn();
+                if (row < 0 || col < 0) {
+                    row = table.getSelectedRow();
+                    col = table.getSelectedColumn();
+                }
+                if (row < 0) return;
+
+                // 停止当前编辑
+                if (table.isEditing()) {
+                    table.getCellEditor().stopCellEditing();
+                }
+
+                if (col == getFirstEditableColumnIndex()) {
+                    // Key 列 → 跳到 Value 列
+                    int valueCol = getLastEditableColumnIndex();
+                    if (table.isCellEditable(row, valueCol)) {
+                        table.changeSelection(row, valueCol, false, false);
+                        table.editCellAt(row, valueCol);
+                        Component ed = table.getEditorComponent();
+                        if (ed != null) {
+                            ed.requestFocusInWindow();
+                            if (ed instanceof JTextField tf) tf.selectAll();
+                        }
+                    }
+                } else {
+                    // Value 列 → 跳到下一行 Key 列
+                    int nextRow = row + 1;
+                    if (nextRow >= table.getRowCount()) {
+                        // 已在最后一行，由 autoAppend 负责追加，稍后选中
+                        SwingUtilities.invokeLater(() -> {
+                            int last = table.getRowCount() - 1;
+                            if (last >= 0) {
+                                table.changeSelection(last, getFirstEditableColumnIndex(), false, false);
+                                table.editCellAt(last, getFirstEditableColumnIndex());
+                                Component ed = table.getEditorComponent();
+                                if (ed != null) {
+                                    ed.requestFocusInWindow();
+                                    if (ed instanceof JTextField tf) tf.selectAll();
+                                }
+                            }
+                        });
+                    } else {
+                        int keyCol = getFirstEditableColumnIndex();
+                        // 找到下一个可编辑的 Key 列（跳过默认 header 行）
+                        while (nextRow < table.getRowCount() && !table.isCellEditable(nextRow, keyCol)) {
+                            nextRow++;
+                        }
+                        if (nextRow < table.getRowCount()) {
+                            table.changeSelection(nextRow, keyCol, false, false);
+                            table.editCellAt(nextRow, keyCol);
+                            Component ed = table.getEditorComponent();
+                            if (ed != null) {
+                                ed.requestFocusInWindow();
+                                if (ed instanceof JTextField tf) tf.selectAll();
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /**

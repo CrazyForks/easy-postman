@@ -136,18 +136,12 @@ public class EasyHttpHeadersTablePanel extends AbstractTablePanel<Map<String, Ob
 
     /**
      * 聚焦到已存在的 header（带延迟以等待UI更新完成）
+     * 使用 javax.swing.Timer 替代 Thread.sleep，避免阻塞 EDT
      */
     private void focusOnExistingHeader(String headerKey) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                // 短暂等待，确保展开动画完成
-                Thread.sleep(100);
-                parentPanel.focusOnHeader(headerKey);
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-                log.warn("Interrupted while focusing on header", ex);
-            }
-        });
+        javax.swing.Timer timer = new javax.swing.Timer(120, e -> parentPanel.focusOnHeader(headerKey));
+        timer.setRepeats(false);
+        timer.start();
     }
 
     /**
